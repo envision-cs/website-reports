@@ -1,0 +1,334 @@
+---
+type Availability =
+	| "done"
+	| "in-progress"
+	| "not-available"
+	| "blank"
+	| "Done"
+	| "In Progress"
+	| "Not Available"
+	| "Blank";
+
+interface Props {
+	availability?: Availability;
+	class?: string;
+	href?: string;
+	month?: string;
+	stats?: string;
+	year?: string | number;
+}
+
+const {
+	availability = "done",
+	class: className = "",
+	href,
+	month = "January",
+	stats = "3,180 sessions · +6% MoM",
+	year = "2026",
+} = Astro.props;
+
+type AvailabilityState = "done" | "in-progress" | "not-available" | "blank";
+
+const availabilityMap: Record<string, AvailabilityState> = {
+	done: "done",
+	"Done": "done",
+	"in-progress": "in-progress",
+	"In Progress": "in-progress",
+	"not-available": "not-available",
+	"Not Available": "not-available",
+	blank: "blank",
+	Blank: "blank",
+};
+
+const statusText = {
+	done: "VIEW REPORT",
+	"in-progress": "IN PROGRESS",
+	"not-available": "NOT AVAILABLE",
+	blank: "",
+} as const;
+
+const state = availabilityMap[availability] ?? "done";
+const isDone = state === "done";
+const isBlank = state === "blank";
+const showGears = state === "in-progress";
+const isLink = isDone && Boolean(href);
+const cardClass = ["month-link-card", className]
+	.filter(Boolean)
+	.join(" ");
+const ariaLabel = isBlank
+	? undefined
+	: isDone
+	? `View ${month} ${year} report`
+	: `${month} ${year} report ${statusText[state].toLowerCase()}`;
+---
+
+{
+	isLink ? (
+		<a
+			aria-label={ariaLabel}
+			class={cardClass}
+			data-availability={state}
+			href={href}
+		>
+			<svg
+				aria-hidden="true"
+				class="month-link-card__report"
+				focusable="false"
+				viewBox="0 0 180 150"
+			>
+				<path d="M 96 10 L 166 10 L 166 142 L 74 142 L 74 32 Z" />
+				<path d="M 96 10 L 96 32 L 74 32" />
+				<rect x="116" y="20" width="38" height="16" rx="2" />
+				<line x1="93.5" y1="78.9" x2="102.5" y2="67.1" />
+				<line x1="114.1" y1="66.7" x2="121.9" y2="75.3" />
+				<line x1="134.1" y1="75.4" x2="145.9" y2="62.6" />
+				<circle cx="88" cy="86" r="9" />
+				<circle cx="108" cy="60" r="9" />
+				<circle cx="128" cy="82" r="9" />
+				<circle cx="152" cy="56" r="9" />
+				<line x1="86" y1="108" x2="120" y2="108" />
+				<line x1="130" y1="108" x2="154" y2="108" />
+				<line x1="86" y1="120" x2="104" y2="120" />
+				<line x1="112" y1="120" x2="154" y2="120" />
+				<line x1="86" y1="132" x2="112" y2="132" />
+				<line x1="120" y1="132" x2="154" y2="132" />
+			</svg>
+			<span class="month-link-card__month">{month}</span>
+			<span class="month-link-card__year">{year}</span>
+			<span class="month-link-card__status">{statusText[state]}</span>
+			{stats && <span class="stats">{stats}</span>}
+		</a>
+	) : isBlank ? (
+		<div
+			aria-hidden="true"
+			class={cardClass}
+			data-availability={state}
+		/>
+	) : (
+		<div
+			aria-disabled={!isDone ? "true" : undefined}
+			aria-label={ariaLabel}
+			class={cardClass}
+			data-availability={state}
+		>
+			{
+					showGears && (
+						<svg
+							aria-hidden="true"
+							class="month-link-card__gears"
+							focusable="false"
+							viewBox="0 0 180 150"
+						>
+							<defs>
+								<g id="month-link-card-gear">
+									<path
+										clip-rule="evenodd"
+										d="M 0 -35.5 L 0.9 -35.5 L 1.8 -35.5 L 2.7 -35.4 L 3.5 -35.3 L 4.4 -35.2 L 5.2 -34.8 L 5.6 -31.5 L 5.5 -27.3 L 5.6 -24.5 L 6.2 -24.2 L 6.8 -24.1 L 7.4 -23.9 L 8 -23.7 L 8.6 -23.5 L 9.1 -23.3 L 9.7 -23 L 10.3 -22.8 L 10.8 -22.5 L 11.5 -22.4 L 13.3 -24.4 L 16 -27.7 L 18.3 -30 L 19.3 -29.8 L 20 -29.3 L 20.7 -28.8 L 21.4 -28.3 L 22.1 -27.8 L 22.8 -27.2 L 23.5 -26.6 L 24.1 -26 L 24.8 -25.4 L 25.4 -24.8 L 26 -24.1 L 26.4 -23.3 L 24.5 -20.6 L 21.8 -17.3 L 20 -15.2 L 20.3 -14.6 L 20.7 -14.1 L 21 -13.6 L 21.3 -13 L 21.7 -12.5 L 22 -12 L 22.2 -11.4 L 22.5 -10.8 L 22.8 -10.3 L 23.2 -9.8 L 25.9 -10.2 L 30.1 -11 L 33.3 -11.2 L 33.9 -10.5 L 34.2 -9.6 L 34.4 -8.8 L 34.6 -7.9 L 34.8 -7 L 35 -6.2 L 35.1 -5.3 L 35.2 -4.4 L 35.3 -3.5 L 35.4 -2.7 L 35.5 -1.8 L 35.1 -0.9 L 32 0 L 27.8 0.7 L 25.1 1.3 L 24.9 1.9 L 24.9 2.5 L 24.8 3.1 L 24.7 3.7 L 24.6 4.3 L 24.5 5 L 24.4 5.6 L 24.2 6.2 L 24.1 6.8 L 24 7.4 L 26.4 8.9 L 30.1 11 L 32.7 12.8 L 32.7 13.8 L 32.4 14.6 L 32 15.4 L 31.6 16.2 L 31.2 17 L 30.7 17.7 L 30.3 18.5 L 29.8 19.3 L 29.3 20 L 28.8 20.7 L 28.3 21.4 L 27.5 21.9 L 24.5 20.6 L 20.9 18.4 L 18.4 17.1 L 17.9 17.5 L 17.5 17.9 L 17 18.3 L 16.5 18.7 L 16.1 19.2 L 15.6 19.5 L 15.1 19.9 L 14.6 20.3 L 14.1 20.7 L 13.6 21.1 L 14.5 23.7 L 16 27.7 L 16.8 30.9 L 16.2 31.6 L 15.4 32 L 14.6 32.4 L 13.8 32.7 L 13 33 L 12.1 33.4 L 11.3 33.7 L 10.5 33.9 L 9.6 34.2 L 8.8 34.4 L 7.9 34.6 L 7 34.5 L 5.6 31.5 L 4.1 27.5 L 3.1 24.9 L 2.5 24.9 L 1.9 24.9 L 1.2 25 L 0.6 25 L 0 25 L -0.6 25 L -1.2 25 L -1.9 24.9 L -2.5 24.9 L -3.1 24.9 L -4.1 27.5 L -5.6 31.5 L -7 34.5 L -7.9 34.6 L -8.8 34.4 L -9.6 34.2 L -10.5 33.9 L -11.3 33.7 L -12.1 33.4 L -13 33 L -13.8 32.7 L -14.6 32.4 L -15.4 32 L -16.2 31.6 L -16.8 30.9 L -16 27.7 L -14.5 23.7 L -13.6 21.1 L -14.1 20.7 L -14.6 20.3 L -15.1 19.9 L -15.6 19.5 L -16.1 19.2 L -16.5 18.7 L -17 18.3 L -17.5 17.9 L -17.9 17.5 L -18.4 17.1 L -20.9 18.4 L -24.5 20.6 L -27.5 21.9 L -28.3 21.4 L -28.8 20.7 L -29.3 20 L -29.8 19.3 L -30.3 18.5 L -30.7 17.8 L -31.2 17 L -31.6 16.2 L -32 15.4 L -32.4 14.6 L -32.7 13.8 L -32.7 12.8 L -30.1 11 L -26.4 8.9 L -24 7.4 L -24.1 6.8 L -24.2 6.2 L -24.4 5.6 L -24.5 5 L -24.6 4.3 L -24.7 3.7 L -24.8 3.1 L -24.9 2.5 L -24.9 1.9 L -25.1 1.3 L -27.8 0.7 L -32 0 L -35.1 -0.9 L -35.5 -1.8 L -35.4 -2.7 L -35.3 -3.5 L -35.2 -4.4 L -35.1 -5.3 L -35 -6.2 L -34.8 -7 L -34.6 -7.9 L -34.4 -8.8 L -34.2 -9.6 L -33.9 -10.5 L -33.3 -11.2 L -30.1 -11 L -25.9 -10.2 L -23.2 -9.8 L -22.8 -10.3 L -22.5 -10.8 L -22.2 -11.4 L -22 -12 L -21.7 -12.5 L -21.3 -13 L -21 -13.6 L -20.7 -14.1 L -20.3 -14.6 L -20 -15.2 L -21.8 -17.3 L -24.5 -20.6 L -26.4 -23.3 L -26 -24.1 L -25.4 -24.8 L -24.8 -25.4 L -24.1 -26 L -23.5 -26.6 L -22.8 -27.2 L -22.1 -27.8 L -21.4 -28.3 L -20.7 -28.8 L -20 -29.3 L -19.3 -29.8 L -18.3 -30 L -16 -27.7 L -13.3 -24.4 L -11.5 -22.4 L -10.8 -22.5 L -10.3 -22.8 L -9.7 -23 L -9.1 -23.3 L -8.6 -23.5 L -8 -23.7 L -7.4 -23.9 L -6.8 -24.1 L -6.2 -24.2 L -5.6 -24.5 L -5.5 -27.3 L -5.6 -31.5 L -5.2 -34.8 L -4.4 -35.2 L -3.5 -35.3 L -2.7 -35.4 L -1.8 -35.5 L -0.9 -35.5 Z M 14.5 0 A 14.5 14.5 0 1 1 -14.5 0 A 14.5 14.5 0 1 1 14.5 0 Z"
+										fill-rule="evenodd"
+									/>
+								</g>
+							</defs>
+							<g class="month-link-card__gear-position" transform="translate(60 88) scale(1.52)">
+								<g class="month-link-card__gear month-link-card__gear--large">
+									<use href="#month-link-card-gear" />
+								</g>
+							</g>
+							<g class="month-link-card__gear-position" transform="translate(116 40) scale(.9)">
+								<g class="month-link-card__gear month-link-card__gear--top">
+									<use href="#month-link-card-gear" />
+								</g>
+							</g>
+							<g class="month-link-card__gear-position" transform="translate(132 110) scale(.96)">
+								<g class="month-link-card__gear month-link-card__gear--small">
+									<use href="#month-link-card-gear" />
+								</g>
+							</g>
+						</svg>
+					)
+			}
+			{
+					isDone && (
+						<svg
+							aria-hidden="true"
+							class="month-link-card__report"
+							focusable="false"
+							viewBox="0 0 180 150"
+						>
+							<path d="M 96 10 L 166 10 L 166 142 L 74 142 L 74 32 Z" />
+							<path d="M 96 10 L 96 32 L 74 32" />
+							<rect x="116" y="20" width="38" height="16" rx="2" />
+							<line x1="93.5" y1="78.9" x2="102.5" y2="67.1" />
+							<line x1="114.1" y1="66.7" x2="121.9" y2="75.3" />
+							<line x1="134.1" y1="75.4" x2="145.9" y2="62.6" />
+							<circle cx="88" cy="86" r="9" />
+							<circle cx="108" cy="60" r="9" />
+							<circle cx="128" cy="82" r="9" />
+							<circle cx="152" cy="56" r="9" />
+							<line x1="86" y1="108" x2="120" y2="108" />
+							<line x1="130" y1="108" x2="154" y2="108" />
+							<line x1="86" y1="120" x2="104" y2="120" />
+							<line x1="112" y1="120" x2="154" y2="120" />
+							<line x1="86" y1="132" x2="112" y2="132" />
+							<line x1="120" y1="132" x2="154" y2="132" />
+						</svg>
+					)
+			}
+			<span class="month-link-card__month">{month}</span>
+			<span class="month-link-card__year">{year}</span>
+			<span class="month-link-card__status">{statusText[state]}</span>
+			{isDone && stats && <span class="stats">{stats}</span>}
+		</div>
+	)
+}
+
+<style>
+	.month-link-card {
+		--month-link-card-bg: var(--clr-gray-800);
+		--month-link-card-bg-hover: var(--clr-gray-700);
+		--month-link-card-status: var(--text-accent);
+
+		align-items: flex-center;
+		background: var(--month-link-card-bg);
+		color: var(--text-main);
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-xxs, 0.25rem);
+		box-sizing: border-box;
+		min-height: 150px;
+		height: 100%;
+		width: 100%;
+		padding: var(--spacing-m, 1rem);
+		overflow: hidden;
+		position: relative;
+		text-decoration: none;
+		transition:
+			background-color 160ms ease,
+			color 160ms ease;
+	}
+
+	.month-link-card[href] {
+		cursor: pointer;
+	}
+
+	.month-link-card[href]:hover {
+		background: var(--month-link-card-bg-hover);
+	}
+
+	.month-link-card[href]:focus-visible {
+		background: var(--month-link-card-bg-hover);
+		outline: none;
+	}
+
+	.month-link-card[data-availability="in-progress"] {
+		--month-link-card-text: var(--text-main);
+		--month-link-card-text-weak: var(--text-muted);
+		--month-link-card-status: var(--clr-orange-500, #e8a23b);
+	}
+
+	.month-link-card[data-availability="not-available"] {
+		--month-link-card-text-weak: var(--text-muted);
+		--month-link-card-status: var(--text-muted);
+	}
+
+	.month-link-card[data-availability="blank"] {
+		--month-link-card-bg-hover: transparent;
+		pointer-events: none;
+	}
+
+	.month-link-card__gears,
+	.month-link-card__report {
+		top: 5%;
+		color: var(--text-main);
+		height: min(120%, 25rem);
+		opacity: 0.02;
+		pointer-events: none;
+		position: absolute;
+		left: 40%;
+		z-index: 0;
+	}
+
+	.month-link-card__report {
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		left: 20%;
+		stroke-width: 7;
+	}
+
+	.month-link-card__gear {
+		--gear-start: 0deg;
+
+		animation: month-link-card-gear-spin 20s linear infinite;
+		fill: currentColor;
+		rotate: var(--gear-start);
+		transform-box: fill-box;
+		transform-origin: center;
+	}
+
+	.month-link-card__gear--top {
+		--gear-start: 27deg;
+		animation-duration: 11.8s;
+	}
+
+	.month-link-card__gear--small {
+		--gear-start: 20deg;
+		animation-duration: 12.6s;
+	}
+
+	.month-link-card__gear--top,
+	.month-link-card__gear--small {
+		animation-direction: reverse;
+	}
+
+	.month-link-card__month,
+	.month-link-card__year,
+	.month-link-card__status,
+	.month-link-card__stats {
+		display: block;
+		letter-spacing: 0;
+		line-height: 1.4;
+		position: relative;
+		width: 100%;
+		z-index: 1;
+	}
+
+	.month-link-card__month {
+	    color: var(--text-main);
+		font-size: var(--font-size-2xl);
+	}
+
+	.month-link-card__year,
+	.stats {
+		color: var(--text-muted);
+		font-size: var(--font-size-sm);
+	}
+
+	.month-link-card__status {
+		color: var(--month-link-card-status);
+		font-size: var(--font-size-sm);
+		letter-spacing: 10%;
+		font-weight: bold;
+		text-transform: uppercase;
+	}
+
+	@keyframes month-link-card-gear-spin {
+		from {
+			rotate: var(--gear-start);
+		}
+
+		to {
+			rotate: calc(var(--gear-start) + 360deg);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.month-link-card {
+			transition: none;
+		}
+
+		.month-link-card__gear {
+			animation: none;
+		}
+	}
+</style>

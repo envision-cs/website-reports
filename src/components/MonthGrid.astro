@@ -1,0 +1,80 @@
+---
+import MonthLinkCard from "./MonthLinkCard.astro";
+
+const months = [
+	{
+		availability: "blank",
+	},
+	{
+	availability: "blank",
+	},
+	{
+
+	availability: "blank",
+
+	},
+	{
+		availability: "blank",
+	},
+	{
+		availability: "blank",
+	},
+	{
+		availability: "done",
+		month: "June",
+		href:'/',
+		year: "2026",
+	},
+	{
+		availability: "in-progress",
+		month: "July",
+		year: "2026",
+	},
+	{
+		availability: "not-available",
+		month: "August",
+		year: "2026",
+	},
+	{
+		availability: "not-available",
+		month: "September",
+		year: "2026",
+	},
+	{
+		availability: "not-available",
+		month: "October",
+		year: "2026",
+	},
+	{
+		availability: "not-available",
+		month: "November",
+		year: "2026",
+	},
+	{
+		availability: "not-available",
+		month: "December",
+		year: "2026",
+	},
+] as const;
+---
+
+<div aria-label="Monthly reports" class="grid">
+	{months.map((month) => <MonthLinkCard {...month} />)}
+</div>
+
+<style>
+	.grid {
+		align-items: start;
+		display: grid;
+		gap: 2px;
+		grid-template-columns: repeat(2, 1fr);
+
+    	@media (min-width: 900px){
+           	grid-template-columns: repeat(3, 1fr);
+    	}
+
+    	@media (min-width: 1100px){
+           	grid-template-columns: repeat(4, 1fr);
+    	}
+	}
+</style>

@@ -1,9 +1,25 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, fontProviders } from 'astro/config';
 
 import cloudflare from '@astrojs/cloudflare';
 
 // https://astro.build/config
 export default defineConfig({
-  adapter: cloudflare()
+  adapter: cloudflare(),
+  fonts: [{
+    provider: fontProviders.local(),
+    name: "Proxima Nova",
+    cssVariable: "--font-proxima-nova",
+    options: {
+      variants: [{
+        src: ['./src/assets/fonts/proxima-nova-300.woff2'],
+        weight: 'normal',
+        style: 'normal'
+      }, {
+        src: ['./src/assets/fonts/proxima-nova-600.woff2'],
+        weight: 'bold',
+        style: 'normal'
+      }]
+    }
+  }]
 });
