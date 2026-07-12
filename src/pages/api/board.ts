@@ -1,0 +1,86 @@
+import type { APIRoute } from "astro";
+import { env } from 'cloudflare:workers';
+
+export const GET: APIRoute = async ({ request }) => {
+  const cloudflareEnv = env;
+  if (!cloudflareEnv || !cloudflareEnv.ENVISION_TASK) {
+    return new Response(JSON.stringify({ error: "KV namespace ENVISION_TASK not bound." }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  const secret = cloudflareEnv.SYNC_SECRET;
+  if (secret) {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader !== `Bearer ${secret}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  try {
+    const data = await cloudflareEnv.ENVISION_TASK.get('board:default', 'text')
+    if (!data) {
+      return new Response(JSON.stringify({ cards: [], updateAt: 0 }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+
+    return new Response(data, {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+};
+
+export const PUT: APIRoute = async ({ request }) => {
+  const cloudflareEnv = env as any;
+  if (!cloudflareEnv || !cloudflareEnv.ENVISION_TASK) {
+    return new Response(JSON.stringify({ error: 'KV namespace ENVISION_TASK not bound.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const secret = cloudflareEnv.SYNC_SECRET;
+  if (secret) {
+    const authHeader = request.headers.get('Authorization');
+    if (authHeader !== `Bearer ${secret}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+  }
+
+  try {
+    const body = await request.json()
+    if (!body || !Array.isArray(body.cards) || typeof body.updatedAt !== 'number') {
+      return new Response(JSON.stringify({ error: 'Invalid body shape. Expected { cards: Card[], updatedAt: number }' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
+
+    await cloudflareEnv.ENVISION_TASK.put('board:default', JSON.stringify(body));
+
+    return new Response(JSON.stringify({ success: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (err: any) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+}
