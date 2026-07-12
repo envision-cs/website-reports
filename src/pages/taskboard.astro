@@ -155,14 +155,134 @@ import Layout from "../layouts/Layout.astro";
   /* ---------- storage: localStorage instead of a server ---------- */
   const KEY = "kanban.cards.v1";
 
+  const boardStore = store(KEY)
+
   // Sync across open tabs: another tab writes, this one re-renders.
   addEventListener("storage", (e) => {
     if (e.key !== KEY) return;
-    store(KEY).cards = new Map(
+    boardStore.cards = new Map(
       JSON.parse(e.newValue ?? "[]").map((c) => [c.id, c]),
     );
     transition(() => render());
   });
+
+let syncTimeout: any = null;
+let maxWaitTimeout: any = null;
+let isDirty = false;
+const DEBOUNCE_MS = 35000;
+const MAX_WAIT_MS = 120000;
+
+function getLocalUpdatedAt(): number {
+  const val = localStorage.getItem(KEY+".updatedAt")
+  return val ? Number(val):0
+}
+
+function markDirty(){
+  isDirty = true
+  localStorage.setItem(KEY + ".updatedAt", Date.now().toString());
+  scheduleSync();
+}
+
+function scheduleSync(){
+  if (syncTimeout) clearTimeout(syncTimeout)
+
+  if(!maxWaitTimeout){
+    maxWaitTimeout = setTimeout(()=>{
+      flushSync()
+    },DEBOUNCE_MS)
+  }
+}
+
+async function flushSync() {
+   if (syncTimeout) {
+     clearTimeout(syncTimeout);
+     syncTimeout = null;
+   }
+   if (maxWaitTimeout) {
+     clearTimeout(maxWaitTimeout);
+     maxWaitTimeout = null;
+   }
+   if (!isDirty) return;
+   const cards = boardStore.list();
+   const updatedAt = getLocalUpdatedAt();
+   try {
+     const response = await fetch("/api/board", {
+       method: "PUT",
+       headers: {
+         "Content-Type": "application/json",
+       },
+       body: JSON.stringify({ cards, updatedAt }),
+     });
+     if (response.ok) {
+       isDirty = false;
+       console.log("Successfully synced taskboard to Cloudflare KV.");
+     } else {
+       console.error("Failed to sync taskboard to KV:", response.statusText);
+       scheduleSync();
+     }
+   } catch (err) {
+     console.error("Error syncing taskboard to KV:", err);
+     scheduleSync();
+   }
+ }
+
+
+ function flushSyncBeacon() {
+   if (!isDirty) return;
+   const cards = boardStore.list();
+   const updatedAt = getLocalUpdatedAt();
+
+   fetch("/api/board", {
+     method: "PUT",
+     headers: {
+       "Content-Type": "application/json",
+     },
+     body: JSON.stringify({ cards, updatedAt }),
+     keepalive: true,
+   }).catch(err => console.error("Exit sync failed:", err));
+ }
+
+ addEventListener("visibilitychange", () => {
+   if (document.visibilityState === "hidden") {
+     flushSyncBeacon();
+   }
+ });
+
+ addEventListener("pagehide", () => {
+   flushSyncBeacon();
+ });
+
+ async function hydrateFromKV() {
+    try {
+      const response = await fetch("/api/board");
+      if (!response.ok) {
+        console.error("Failed to fetch taskboard from KV:", response.statusText);
+        return;
+      }
+
+      const remoteData = await response.json();
+      if (!remoteData || !Array.isArray(remoteData.cards)) return;
+
+      const localUpdatedAt = getLocalUpdatedAt();
+      const remoteUpdatedAt = remoteData.updatedAt || 0;
+
+      if (remoteUpdatedAt > localUpdatedAt) {
+        console.log("Remote board is newer. Hydrating local state...");
+        localStorage.setItem(KEY, JSON.stringify(remoteData.cards));
+        localStorage.setItem(KEY + ".updatedAt", remoteUpdatedAt.toString());
+
+        boardStore.cards = new Map(remoteData.cards.map((c: any) => [c.id, c]));
+        transition(() => render());
+      } else if (remoteUpdatedAt < localUpdatedAt && localUpdatedAt > 0) {
+        console.log("Local board is newer. Triggering sync to KV...");
+        isDirty = true;
+        flushSync();
+      }
+    } catch (err) {
+      console.error("Error during KV hydration:", err);
+    }
+  }
+
   /* ---------- rendering ---------- */
   const board = document.getElementById("board");
   const liveRegion = document.getElementById("board-live");
@@ -316,13 +436,15 @@ import Layout from "../layouts/Layout.astro";
       return;
     }
     field.textContent = next;
-    store(KEY).update(el.dataset.id, {
+    boardStore.update(el.dataset.id, {
       [key]: next,
     });
+    markDirty()
   }
   async function deleteCard(el) {
     const column = el.closest(".column");
-    store(KEY).remove(el.dataset.id);
+    boardStore.remove(el.dataset.id);
+    markDirty()
     await transition(() => {
       el.remove();
       updateCount(column);
@@ -414,14 +536,15 @@ import Layout from "../layouts/Layout.astro";
       const cards = [...column.querySelectorAll(".card")];
       cards.forEach((element, index) => {
         const position = index + 1;
-        const card = store(KEY).cards.get(element.dataset.id);
+        const card = boardStore.cards.get(element.dataset.id);
         if (!card) return;
         card.status = status;
         card.position = position;
         element.dataset.position = position;
       });
     }
-    store.persist();
+    boardStore.persist();
+    markDirty()
   }
   /* ---------- drag and drop ---------- */
   function getCardAfter(list, y) {
@@ -491,7 +614,8 @@ import Layout from "../layouts/Layout.astro";
       const description = descInput.value.trim();
       input.value = "";
       descInput.value = "";
-      const card = store(KEY).create(title, description, status);
+      const card = boardStore.create(title, description, status);
+      markDirty()
       await transition(() => {
         list.appendChild(makeCard(card));
         updateCount(column);
@@ -501,7 +625,7 @@ import Layout from "../layouts/Layout.astro";
   /* ---------- init ---------- */
   function render() {
     board.replaceChildren();
-    const byStatus = Map.groupBy(store(KEY).list(), (c) => c.status);
+    const byStatus = Map.groupBy(boardStore.list(), (c) => c.status);
     for (const { id, label } of COLUMNS) {
       const column = columnTpl.content.firstElementChild.cloneNode(true);
       column.dataset.status = id;
@@ -515,7 +639,9 @@ import Layout from "../layouts/Layout.astro";
       updateCount(column);
     }
   }
+
   render();
+  hydrateFromKV();
 </script>
 
 <style>
