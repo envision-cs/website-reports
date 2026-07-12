@@ -1,42 +1,18 @@
 ---
-import MonthGrid from '../components/MonthGrid.astro';
-import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import MonthGrid from "../components/MonthGrid.astro";
+import Layout from "../layouts/Layout.astro";
+import PageHead from "../components/PageHead.astro";
 ---
 
 <Layout pageTitle="Home">
-    <div class="heading-wrapper">
-        <p class="eyebrow">Performance Reports</p>
-        <p class="heading">Every month, on the record.</p>
-        <p class="body">A running archive of Envision's monthly SEO performance. Pick a year, then open any month to see that report.</p>
-    </div>
+  <section class="container">
+    <PageHead
+      eyebrow="Performance Reports"
+      heading="Every month, on the record."
+      body="A running archive of Envision's monthly SEO performance. Pick a year, then open any month to see that report."
+    />
     <section>
-        <MonthGrid />
+      <MonthGrid />
     </section>
+  </section>
 </Layout>
-
-<style>
-.eyebrow {
-   font-size: var(--font-size-md);
-   text-transform: uppercase;
-   color: var(--text-accent);
-   margin-bottom: var(--spacing-xs);
-   letter-spacing: 10%;
-   font-weight: bold;
-}
-.heading {
-    font-size: var(--font-size-6xl);
-    max-width: 11ch;
-    line-height: 1;
-    text-wrap: balance;
-    margin-bottom: var(--spacing-s);
-}
-.body {
-    font-size: var(--font-size-md);
-    color: var(--text-muted);
-    max-width: 40ch;
-    text-wrap: balance;
-}
-</style>

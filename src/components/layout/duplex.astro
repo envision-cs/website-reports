@@ -1,0 +1,16 @@
+<div class="duplex">
+  <slot />
+</div>
+
+<style>
+  .duplex {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-l);
+
+    @container main-container (width > 832px) {
+      gap: var(--spacing-xl);
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>

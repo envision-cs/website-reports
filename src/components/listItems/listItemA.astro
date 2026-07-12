@@ -1,0 +1,50 @@
+---
+interface Props {
+  title?: string;
+  value?: string | number;
+  class?: string;
+}
+
+const { title = "Tampa", value = "59", class: className } = Astro.props;
+---
+
+<div class:list={["list-item-a", className]} data-node-id="111:1549">
+  <p class="title" data-node-id="111:1546">{title}</p>
+  <p class="value" data-node-id="111:1547">{value}</p>
+</div>
+
+<style>
+  .list-item-a {
+    display: flex;
+    align-items: flex-start;
+    gap: 4.0625rem;
+    width: 100%;
+    padding-block: var(--spacing-s, 1rem);
+    border-top: 1px solid var(--text-muted, rgb(255 255 255 / 40%));
+    color: var(--text-main, var(--clr-white, #fff));
+    font-family: var(--ff-body, "Proxima Nova", sans-serif);
+    font-size: var(--font-size-md, 1rem);
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0.15em;
+    overflow-wrap: anywhere;
+  }
+
+  .title,
+  .value {
+    margin: 0;
+    font: inherit;
+    color: inherit;
+  }
+
+  .title {
+    flex: none;
+    white-space: nowrap;
+  }
+
+  .value {
+    flex: 1 0 0;
+    min-width: 0;
+    text-align: right;
+  }
+</style>

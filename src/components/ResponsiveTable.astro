@@ -1,0 +1,140 @@
+---
+export type TableCellValue = string | number | null | undefined;
+
+export type TableRow = Readonly<Record<string, TableCellValue>>;
+
+export interface TableColumn {
+  key: string;
+  label: string;
+  width?: string;
+  rowHeader?: boolean;
+}
+
+interface Props {
+  caption: string;
+  columns: readonly TableColumn[];
+  rows: readonly TableRow[];
+  minWidth?: string;
+  class?: string;
+}
+
+const {
+  caption,
+  columns,
+  rows,
+  minWidth = "45rem",
+  class: className,
+} = Astro.props;
+
+const cellValue = (row: TableRow, key: string) => row[key] ?? "—";
+---
+
+<div
+  class:list={["table-region", className]}
+  role="region"
+  aria-label={caption}
+  tabindex="0"
+  style={`--table-min-width: ${minWidth}`}
+>
+  <table>
+    <caption>{caption}</caption>
+    <colgroup>
+      {
+        columns.map((column) => (
+          <col style={column.width ? `width: ${column.width}` : undefined} />
+        ))
+      }
+    </colgroup>
+    <thead>
+      <tr>
+        {columns.map((column) => <th scope="col">{column.label}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr>
+            {columns.map((column) =>
+              column.rowHeader ? (
+                <th scope="row">{cellValue(row, column.key)}</th>
+              ) : (
+                <td>{cellValue(row, column.key)}</td>
+              ),
+            )}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .table-region {
+    width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+  }
+
+  .table-region:focus-visible {
+    outline: 2px solid var(--text-accent, var(--clr-blue-500));
+    outline-offset: var(--spacing-xxs, 0.25rem);
+  }
+
+  table {
+    width: 100%;
+    min-width: var(--table-min-width);
+    border-collapse: collapse;
+    table-layout: fixed;
+    color: var(--text-muted);
+    font-family: var(--ff-body, sans-serif);
+    font-size: var(--font-size-sm, 0.813rem);
+    line-height: 1.4;
+    text-align: left;
+  }
+
+  caption {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  th,
+  td {
+    padding: var(--spacing-s, 1rem) var(--spacing-xs, 0.5rem)
+      var(--spacing-s, 1rem) 0;
+    border-top: 1px solid color-mix(in srgb, var(--text-muted) 55%, transparent);
+    vertical-align: top;
+    overflow-wrap: anywhere;
+  }
+
+  thead th {
+    padding-block: 0 var(--spacing-xs, 0.5rem);
+    border-top: 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-xs, 0.688rem);
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  tbody th {
+    color: var(--text-main);
+    font-weight: 600;
+  }
+
+  tbody tr:last-child > * {
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 40rem) {
+    .table-region {
+      padding-bottom: var(--spacing-xs, 0.5rem);
+    }
+  }
+</style>

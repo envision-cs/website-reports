@@ -1,0 +1,19 @@
+<div>
+  <slot />
+</div>
+
+<style>
+  div {
+    display: grid;
+    margin-top: var(--spacing-m);
+    gap: var(--spacing-m);
+
+    @container main-container (width > 448px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @container main-container (width > 880px) {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  }
+</style>

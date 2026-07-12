@@ -1,0 +1,51 @@
+---
+interface Props {
+  label: string;
+  max: number;
+  value: number;
+}
+
+const { label, max, value } = Astro.props;
+---
+
+<div class="meter">
+  <label for={label}>{label}</label>
+  <meter id={label} max={max} value={value}>{value}</meter>
+  <p>{value}</p>
+</div>
+
+<style>
+  .meter {
+    display: grid;
+    gap: var(--spacing-s);
+    align-items: center;
+    padding-block: var(--spacing-xxs);
+    grid-template-columns: 80px auto 40px;
+  }
+
+  label {
+    font-size: var(--font-size-md);
+  }
+
+  meter {
+    appearance: none;
+    -webkit-appearance: none;
+
+    height: 2.25em;
+    width: 100%;
+  }
+
+  meter::-webkit-meter-bar {
+    background: #aeaeb7; /* Background track style */
+  }
+
+  meter::-webkit-meter-optimum-value {
+    background: var(--clr-blue-500);
+    border-radius: 0;
+  }
+
+  meter::-moz-meter-bar {
+    background: var(--clr-blue-500);
+    border-radius: 0;
+  }
+</style>

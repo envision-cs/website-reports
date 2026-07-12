@@ -1,0 +1,15 @@
+<div class="triplex">
+  <slot />
+</div>
+
+<style>
+  .triplex {
+    display: grid;
+    margin-top: var(--spacing-m);
+    gap: var(--spacing-m);
+
+    @container main-container (width > 880px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>

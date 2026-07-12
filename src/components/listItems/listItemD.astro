@@ -1,0 +1,55 @@
+---
+interface Props {
+  /** Primary metric displayed by the item. */
+  value?: string | number;
+  /** Date range or supporting context shown below the metric. */
+  label?: string;
+  class?: string;
+}
+
+const {
+  value = "18",
+  label = "May 31 – Jun 6 · 7 days",
+  class: className,
+} = Astro.props;
+---
+
+<article class:list={["item", className]} data-node-id="136:1141">
+  <p class="value" data-node-id="136:1138">{value}</p>
+  <p class="label" data-node-id="136:1139">{label}</p>
+</article>
+
+<style>
+  .item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-xxs, 0.25rem);
+    width: 100%;
+    padding-block: var(--spacing-m, 1.5rem);
+    border-bottom: 1px solid var(--text-muted, rgb(255 255 255 / 40%));
+    font-family: Inter, var(--ff-body, sans-serif);
+    font-style: normal;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+
+  .value,
+  .label {
+    width: 100%;
+    margin: 0;
+    font: inherit;
+  }
+
+  .value {
+    color: var(--text-main, var(--clr-white, #fff));
+    font-size: var(--font-size-6xl, 3.563rem);
+    line-height: 1;
+  }
+
+  .label {
+    color: var(--text-muted, rgb(255 255 255 / 40%));
+    font-size: var(--font-size-md, 1rem);
+    line-height: 1.6;
+  }
+</style>

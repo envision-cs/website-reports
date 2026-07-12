@@ -1,0 +1,494 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import PageHead from "../../components/PageHead.astro";
+import CardA from "../../components/cards/card-a.astro";
+import CardB from "../../components/cards/card-b.astro";
+import ProgressItem from "../../components/ProgressItem.astro";
+import ListItemA from "../../components/listItems/listItemA.astro";
+import ListItemC from "../../components/listItems/listItemC.astro";
+import ListItemD from "../../components/listItems/listItemD.astro";
+
+import Duplex from "../../components/layout/duplex.astro";
+import Quad from "../../components/layout/quad.astro";
+import Triplex from "../../components/layout/triplex.astro";
+import SubSection from "../../components/SubSection.astro";
+import SectionHeader from "../../components/SectionHeader.astro";
+import ResponsiveTable, {
+  type TableColumn,
+} from "../../components/ResponsiveTable.astro";
+
+const roadmapItems = [
+  {
+    initiative: "Analytics cleanup",
+    status: "In progress",
+    owner: "Analytics consultant",
+    due: "Jul 17",
+    successMetric: "Standardized queries; filtered human-traffic view",
+  },
+  {
+    initiative: "Conversion tracking audit",
+    status: "Not started",
+    owner: "Web team",
+    due: "Jul 24",
+    successMetric: "All CTA, form, and call events verified",
+  },
+  {
+    initiative: "Contact-page review",
+    status: "Not started",
+    owner: "Web team",
+    due: "Jul 24",
+    successMetric: "Session-recording review complete; fix list issued",
+  },
+  {
+    initiative: "Search Console baseline",
+    status: "Completed",
+    owner: "Analytics consultant",
+    due: "Jul 31",
+    successMetric: "Queries, impressions & clicks in the July report",
+  },
+  {
+    initiative: "Referral-source audit",
+    status: "Not started",
+    owner: "Analytics consultant",
+    due: "Jul 31",
+    successMetric: "Domains behind 159 referral sessions named",
+  },
+  {
+    initiative: "Local landing-page plan",
+    status: "Not started",
+    owner: "Envision marketing",
+    due: "Aug 14",
+    successMetric: "Plan approved; first page live",
+  },
+  {
+    initiative: "Technical SEO baseline",
+    status: "Not started",
+    owner: "Web team",
+    due: "Aug 14",
+    successMetric: "Core Web Vitals, indexing & crawl-error baseline recorded",
+  },
+] as const;
+
+const roadmapColumns = [
+  { key: "initiative", label: "Initiative", width: "16.5%", rowHeader: true },
+  { key: "status", label: "Status", width: "11%" },
+  { key: "owner", label: "Owner", width: "14.5%" },
+  { key: "due", label: "Due", width: "7%" },
+  { key: "successMetric", label: "Success Metric", width: "51%" },
+] satisfies readonly TableColumn[];
+---
+
+<Layout pageTitle="June | 2026">
+  <section>
+    <div class="container">
+      <PageHead
+        eyebrow="Executive Summary — June 2026"
+        heading="June establishes the reporting baseline"
+        body="The site launched in June and recorded 1,538 sessions from about 1,190 unique visitors. Organic search accounted for 191 sessions, and the site generated 48 tracked lead-related interactions. Search traffic improved toward the end of the month. The next priorities are cleaning up the data, connecting Search Console, and confirming that conversion tracking is working correctly."
+      />
+
+      <Quad>
+        <CardA number="1,540" information="Sessions in June" />
+        <CardA number="1,190" information="Direct share of sessions" />
+        <CardA number="191" information="Organic-search sessions" />
+        <CardA number="48" information="Tracked lead interactions" />
+      </Quad>
+      <p class="note">
+        Source: PostHog, June 1–30, 2026. Raw totals include suspected
+        datacenter and automated activity. June establishes the first reliable
+        reporting baseline; previous-period percentage changes are excluded
+        where tracking coverage was not comparable.
+      </p>
+    </div>
+  </section>
+  <section data-color="light" class="flow">
+    <div class="container flow">
+      <Duplex>
+        <SectionHeader
+          eyebrow="Executive Summary — June 2026"
+          heading="June establishes the reporting baseline"
+        />
+        <p>
+          Direct traffic made up 1,178 sessions in June, or 77% of all traffic.
+          Organic search contributed 191 sessions, while referral traffic
+          accounted for 159. Organic traffic was slow early in the month but
+          improved steadily, reaching 19 sessions on June 30. Some direct
+          traffic may be automated, so it should not yet be used as a reliable
+          measure of brand demand. The immediate priorities are filtering
+          suspected bot traffic and connecting Google Search Console. A 25–35%
+          organic traffic share is a long-term goal rather than a near-term
+          forecast.
+        </p>
+      </Duplex>
+      <Quad>
+        <CardB
+          title="Sessions"
+          value="1,540"
+          subtitle="From ~1,190 unique visitors"
+        />
+        <CardB title="Organic Search" value="191" subtitle="12% of sessions" />
+        <CardB title="Referral" value="159" subtitle="10% of sessions" />
+        <CardB
+          title="Organic Social"
+          value="8"
+          subtitle="Under 1% · email: 2"
+        />
+      </Quad>
+      <Duplex>
+        <SubSection
+          title="Channels by Sessions — Sitewide"
+          description="Session-based, sitewide. Includes suspected datacenter and automated activity."
+        >
+          <ProgressItem label="Direct" max="1779" value="1779" />
+          <ProgressItem label="Organic Search" max="1779" value="191" />
+          <ProgressItem label="Referral" max="1779" value="159" />
+          <ProgressItem label="Organic Social" max="1779" value="8" />
+          <ProgressItem label="Email" max="1779" value="2" />
+        </SubSection>
+        <SubSection
+          title="Organic Search — Daily Trend"
+          description="The June 8 spike is unattributed — the analysis suggests checking Search Console for the source (a new page indexed, a local mention, or a seasonal uptick)."
+        >
+          <ListItemA title="June 1-7" value="0-1/day" />
+          <ListItemA title="June 8 - spike" value="17 sessions" />
+          <ListItemA title="Mid-month, good days" value="7–13 / day" />
+          <ListItemA title="June 30 — month high" value="19 sessions" />
+        </SubSection>
+      </Duplex>
+    </div>
+    <div class="container flow">
+      <Duplex>
+        <SectionHeader
+          eyebrow="02 — Top Pages"
+          heading="Pages by Recorded View Events"
+        />
+        <p>
+          The homepage recorded the most page-view events in June with 1,764. It
+          was followed by /team with 387, /projects with 335, /services with
+          193, /about with 189, and /contact with 173.
+        </p>
+      </Duplex>
+      <Triplex>
+        <CardB
+          title="Homepage Views"
+          value="1,764"
+          subtitle="Differs from Page Reports' see note 02"
+        />
+        <CardB
+          title="Homepage Entries"
+          value="269"
+          subtitle="Entry visitors · 529 entry views"
+        />
+        <CardB
+          title="Homepage Bounce Rate"
+          value="23.5%"
+          subtitle="#6 page by views · see 05"
+        />
+      </Triplex>
+      <Duplex>
+        <SubSection
+          title="Channels by Sessions — Sitewide"
+          description="Session-based, sitewide. Includes suspected datacenter and automated activity."
+        >
+          <ListItemA title="/" value="1,764" />
+          <ListItemA title="/team" value="387" />
+          <ListItemA title="/projects" value="335" />
+          <ListItemA title="/services" value="193" />
+          <ListItemA title="/about" value="189" />
+          <ListItemA title="/contact" value="173" />
+          <ListItemA title="/Projects — Business & Corporate" value="110" />
+          <ListItemA title="/Projects — Arts & Entertainment" value="107" />
+          <ListItemA title="/Services — Construction Management" value="106" />
+          <ListItemA title="/Projects — Athletics" value="97" />
+        </SubSection>
+        <SubSection title="Notes from the Analysis" description="">
+          <ListItemC
+            number="01"
+            title="Homepage quality signals"
+            description="The homepage recorded 269 entry visitors, 529 entry views, and a 23.5% bounce rate. Going forward, entry and engagement metrics will provide a clearer view of performance than raw page-view totals."
+          />
+          <ListItemC
+            number="02"
+            title="Two homepage totals"
+            description="The 1,764 view-event total comes from a different PostHog query than the 576 homepage views reported in Page Reports. The query definitions should be aligned before the July report."
+          />
+          <ListItemC
+            number="03"
+            title="Columns to add next month"
+            description="Next month’s report should include organic visitors, entry visitors, bounce rate, CTA actions, and conversion rate for each page. June will serve as the starting point for these metrics."
+          />
+        </SubSection>
+      </Duplex>
+    </div>
+  </section>
+
+  <section class="flow">
+    <div class="container flow">
+      <Duplex>
+        <SectionHeader
+          eyebrow="03 — Technical Health & Device Experience"
+          heading="June establishes the reporting baseline"
+        />
+        <p>
+          The sitewide report shows 1,388 desktop sessions, or about 89% of
+          traffic, compared with 172 mobile sessions, or about 11%.<br />
+           Homepage Page Reports show a different split: 221 desktop visitors, or
+          about 75%, and 72 mobile visitors, or about 25%. <br /> The difference
+          likely reflects how each report is scoped and calculated. On its own,
+          it does not indicate a mobile SEO problem. Device reporting should use
+          one consistent scope and measurement before a baseline is established.
+        </p>
+      </Duplex>
+      <Duplex>
+        <SubSection
+          title="Sitewide — Sessions by Device"
+          description="Session-based; includes suspected automated traffic."
+        >
+          <div class="side-by">
+            <CardB value="89%" subtitle="Desktop — 1,388 sessions" />
+            <CardB value="11%" subtitle="Mobile — 172 sessions" />
+          </div>
+        </SubSection>
+
+        <SubSection
+          title="Homepage — Visitors by Device"
+          description="Visitor-based; homepage only (Page Reports)."
+        >
+          <div class="side-by">
+            <CardB value="75%" subtitle="Desktop — 221 visitors" />
+            <CardB value="25%" subtitle="Mobile — 72 visitors" />
+          </div>
+        </SubSection>
+      </Duplex>
+      <Duplex>
+        <SubSection title="Data Standardization">
+          <p>
+            Device reporting needs one consistent scope and unit before a
+            reliable baseline can be established. Time on page is excluded
+            because the current data contains multi-hour outliers, likely caused
+            by inactive browser tabs or tracking issues. Once the data is
+            corrected, time on page should be reported using the median or 75th
+            percentile instead of the mean.
+          </p>
+        </SubSection>
+        <SubSection title="Technical Baseline — To Be Established">
+          <ListItemA
+            title="Core Web Vitals"
+            value="Baseline not yet established"
+          />
+          <ListItemA
+            title="Crawl errors & broken links"
+            value="Baseline not yet established"
+          />
+          <ListItemA
+            title="Schema coverage"
+            value="Baseline not yet established"
+          />
+          <ListItemA
+            title="Mobile usability"
+            value="Baseline not yet established"
+          />
+          <ListItemA
+            title="Indexing coverage"
+            value="Baseline not yet established"
+          />
+        </SubSection>
+      </Duplex>
+    </div>
+  </section>
+
+  <section class="flow" data-color="light">
+    <div class="container flow">
+      <Duplex>
+        <SectionHeader
+          eyebrow="04 — Audience & Local Reach"
+          heading="Visitors by Recorded Location."
+        />
+        <p>
+          Finding: sitewide, the largest recorded locations were San Jose (111),
+          Tampa (95), Riverview (80), Ashburn (77), and Boydton (76), with 246
+          where location could not be reliably resolved. On the homepage, Tampa
+          led with 59 visitors, then Riverview (19), San Jose (10), and Ashburn
+          (8). Interpretation: traffic from San Jose, Ashburn, and Boydton
+          appears consistent with datacenter or automated activity; Tampa-area
+          locations align with the service area. City names alone do not confirm
+          either. Action: validate suspected automated traffic before including
+          it in prospect-level reporting.
+        </p>
+      </Duplex>
+      <Duplex>
+        <SubSection
+          title="Sitewide — Recorded Locations"
+          description="'Datacenter-consistent' traffic should be validated before inclusion in prospect-level reporting."
+        >
+          <ListItemA title="Location not reliably resolved" value="246" />
+          <ListItemA title="San Jose — datacenter-consistent" value="111" />
+          <ListItemA title="Tampa" value="95" />
+          <ListItemA title="Riverview" value="80" />
+          <ListItemA title="Ashburn — datacenter-consistent" value="77" />
+          <ListItemA title="Boydton — datacenter-consistent" value="76" />
+          <ListItemA title="Atlanta" value="14" />
+        </SubSection>
+
+        <SubSection
+          title="Homepage — Visitors by Recorded Location"
+          description="Riverview generated 19 homepage visitors and 135 homepage views — an unusually high ratio that should be investigated before being treated as strong engagement."
+        >
+          <ListItemA title="Tampa" value="59" />
+          <ListItemA title="Location not reliably resolved" value="24" />
+          <ListItemA title="Riverview" value="19" />
+          <ListItemA title="San Jose — datacenter-consistent" value="10" />
+          <ListItemA title="Ashburn — datacenter-consistent" value="8" />
+          <ListItemA title="St. Petersburg" value="7" />
+          <ListItemA title="Land O' Lakes" value="6" />
+        </SubSection>
+      </Duplex>
+      <SubSection title="For Future Reports">
+        <p>
+          CTA actions by city · organic visitors by city · local conversion rate
+          · a filtered human-traffic view · service-area share. Baseline not yet
+          established.
+        </p>
+      </SubSection>
+    </div>
+  </section>
+  <section>
+    <div class="container flow">
+      <Duplex>
+        <div>
+          <SectionHeader
+            eyebrow="05 — Conversions & Leads"
+            heading="48 Tracked Lead-Related Interactions."
+          />
+          <p>
+            June recorded 45 general CTA clicks, 2 email clicks, and 1 phone
+            click, for a total of 48 tracked lead-related interactions. These
+            are actions, not confirmed leads. CTA activity trended down during
+            the month, but the comparison is not yet clean: the first periods
+            cover seven days, the final period covers three, and some early
+            activity may include bot or internal traffic. The next step is to
+            confirm that each CTA event is firing correctly and review session
+            recordings on /contact.
+          </p>
+
+          <SubSection
+            description="Tracking status: form-submission tracking — baseline not yet established. Call tracking — baseline not yet established. CTA event firing — verification scheduled. /contact session-recording review — scheduled (R—01)."
+          >
+            <ListItemA title="General CTA clicks" value="45" />
+            <ListItemA title="Email clicks" value="2" />
+            <ListItemA title="Phone clicks" value="1" />
+            <ListItemA
+              title="Total tracked lead-related interactions"
+              value="48"
+            />
+          </SubSection>
+        </div>
+
+        <SubSection
+          title="CTA Clicks by Period — June"
+          description="Periods are unequal in length, so raw counts are not directly comparable. Future reports will use CTA clicks per day, clicks per 100 sessions, contact-page conversion rate, organic-session-to-lead rate, confirmed form submissions, and qualified inquiries."
+        >
+          <ListItemD value="18" description="May 31 – Jun 6 · 7 days" />
+          <ListItemD value="18" description="Jun 7 – 13 · 7 days" />
+          <ListItemD value="5" description="Jun 14 – 20 · 7 days" />
+          <ListItemD value="3" description="Jun 21 – 27 · 7 days" />
+          <ListItemD value="1" description="Jun 28 – 30 · 3 days" />
+        </SubSection>
+      </Duplex>
+    </div>
+  </section>
+  <section data-color="light">
+    <div class="container flow">
+      <Duplex>
+        <SectionHeader
+          eyebrow="06 — Wins & Recommendations"
+          heading="Wins & Action Plan."
+        />
+        <p>
+          Three evidence-based positives from June, followed by the action plan
+          in three tiers: this week, this month, and ongoing. Each
+          recommendation carries a rationale, an owner, a due date, and a
+          success metric; progress is tracked in section 07.
+        </p>
+      </Duplex>
+      <Triplex>
+        <ListItemC
+          number="01"
+          title="Organic Closed at Its High"
+          description="Organic search ended the month at its highest daily level — 19 sessions on June 30, after a near-silent first week. Sustaining that level is the clearest early SEO signal to watch."
+          variant="stacked"
+        />
+        <ListItemC
+          number="02"
+          title="98 Google-Referred Homepage Visitors"
+          description="Google referred 98 recorded homepage visitors, with 21 from Bing and 2 from DuckDuckGo — search engines are already a meaningful homepage visitor source."
+          variant="stacked"
+        />
+        <ListItemC
+          number="03"
+          title="Organic Closed at Its High"
+          description="The homepage drew 269 entry visitors and 529 entry views with a 23.5% measured bounce rate — the natural place to strengthen service-area messaging and lead pathways."
+          variant="stacked"
+        />
+      </Triplex>
+      <SubSection title="Priority Action Plan" class="priority-action-plan">
+        <ListItemC
+          number="R—02"
+          title="This month — Search Console, referral audit, Business Profile"
+          description="Connect and incorporate Google Search Console; identify the actual domains behind the 159 referral sessions; verify, complete, and optimize the Google Business Profile. Rationale: these establish the query-level and local-visibility baselines June could not provide. Owner: analytics consultant · Due: Jul 31 · Success metric: Search Console queries and named referral domains in the July report"
+          class="action-plan-item"
+        />
+        <ListItemC
+          number="R—01"
+          title="This week — data cleanup & event verification"
+          description="Standardize PostHog query definitions (one homepage total, one device view), filter internal and suspected automated traffic, verify all lead events fire correctly, and review /contact session recordings. Rationale: conflicting totals and unverified events currently limit every other conclusion in this report. Owner: analytics consultant · Due: Jul 17 · Success metric: one reconciled query set and a filtered human-traffic view live in PostHog"
+          class="action-plan-item"
+        />
+        <ListItemC
+          number="R—03"
+          title="Ongoing — confirmed-lead tracking & local landing pages"
+          description="Establish confirmed-lead tracking (form submissions, call tracking), then develop the local landing-page strategy for core service areas. Structured data is added only where eligibility is confirmed; review markup waits until valid first-party review content exists. Rationale: confirmed leads, not CTA clicks, are the metric this program is accountable to. Owner: web team + Envision marketing · Due: first read Aug 29 · Success metric: confirmed leads reported by source in the August report"
+          class="action-plan-item"
+        />
+      </SubSection>
+    </div>
+  </section>
+  <section>
+    <div class="container flow roadmap-container">
+      <Duplex>
+        <SectionHeader
+          eyebrow="07 — What's Next?"
+          heading="The July Roadmap."
+        />
+        <p class="roadmap-summary">
+          Planned work, each item with an owner, a due date, and a success
+          metric. The August report will mark every initiative completed, in
+          progress, or blocked - with the measured result alongside.
+        </p>
+      </Duplex>
+      <ResponsiveTable
+        caption="July roadmap initiatives"
+        columns={roadmapColumns}
+        rows={roadmapItems}
+      />
+    </div>
+  </section>
+</Layout>
+
+<style>
+  p {
+    color: var(--text-muted);
+    font-size: var(--font-size-md);
+  }
+
+  .side-by {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-m);
+  }
+
+  .note {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+  }
+</style>

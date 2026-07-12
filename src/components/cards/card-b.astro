@@ -1,0 +1,73 @@
+---
+interface Props {
+  /** Uppercase label shown above the metric. */
+  title?: string;
+  /** Primary metric displayed by the card. */
+  value?: string | number;
+  /** Supporting context shown below the metric. */
+  subtitle?: string;
+  class?: string;
+}
+
+const { title, value, subtitle, class: className } = Astro.props;
+---
+
+<article class:list={["card-b", className]} data-node-id="71:768">
+  <p class="title" data-node-id="71:752">{title}</p>
+  <p class="value" data-node-id="71:753">{value}</p>
+  <p class="subtitle" data-node-id="71:754">{subtitle}</p>
+</article>
+
+<style>
+  :global([data-color="light"]) .card-b {
+    --__background: var(--clr-white);
+    background: var(--__background);
+  }
+
+  .card-b {
+    --__background: transparent;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-s, 1rem);
+    padding: var(--spacing-m, 1.5rem);
+    overflow-wrap: anywhere;
+    background: var(--__background);
+  }
+
+  .title,
+  .value,
+  .subtitle {
+    margin: 0;
+    font-style: normal;
+  }
+
+  .title {
+    font-family: var(--ff-heading, "Proxima Nova", sans-serif);
+    font-size: var(--font-size-md, 1rem);
+    font-weight: 600;
+    line-height: normal;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    text-wrap: wrap;
+  }
+
+  .value {
+    width: 100%;
+    font-family: var(--ff-body, sans-serif);
+    font-size: var(--font-size-6xl, 3.563rem);
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .subtitle {
+    font-family: var(--ff-body, sans-serif);
+    font-size: var(--font-size-sm, 0.813rem);
+    font-weight: 400;
+    line-height: 1.4;
+    color: var(--text-muted);
+    text-wrap: wrap;
+  }
+</style>

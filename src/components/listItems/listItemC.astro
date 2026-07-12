@@ -1,0 +1,103 @@
+---
+interface Props {
+  number?: string | number;
+  title?: string;
+  description?: string;
+  variant?: "default" | "stacked";
+  class?: string;
+}
+
+const {
+  number = "01",
+  title = "Homepage: 35% of all views",
+  description = "Recommended first move: local keywords, a map embed, and service-area language on this page, given its share of traffic.",
+  variant = "default",
+  class: className,
+} = Astro.props;
+
+const isStacked = variant === "stacked";
+---
+
+<article
+  class:list={["item", { stacked: isStacked }, className]}
+  data-node-id={isStacked ? "136:1291" : "104:1292"}
+>
+  <p class="number" data-node-id={isStacked ? "136:1292" : "103:1287"}>
+    {number}
+  </p>
+
+  <div class="content" data-node-id={isStacked ? "136:1293" : "103:1290"}>
+    <h3 class="title" data-node-id={isStacked ? "136:1294" : "103:1288"}>
+      {title}
+    </h3>
+    <p class="description" data-node-id={isStacked ? "136:1295" : "103:1289"}>
+      {description}
+    </p>
+  </div>
+</article>
+
+<style>
+  .item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-m, 1.5rem);
+    width: 100%;
+    padding-block: var(--spacing-l, 2rem);
+    border-top: 1px solid var(--text-muted, rgb(255 255 255 / 40%));
+    overflow-wrap: anywhere;
+  }
+
+  .item.stacked {
+    flex-direction: column;
+    gap: var(--spacing-s, 1rem);
+    padding: var(--spacing-l, 2rem);
+    border-top: 0;
+  }
+
+  .number,
+  .title,
+  .description {
+    margin: 0;
+    font-style: normal;
+  }
+
+  .number {
+    flex: none;
+    color: var(--clr-blue-500, #3baee8);
+    font-family: var(--ff-body, "Proxima Nova", sans-serif);
+    font-size: var(--font-size-md, 1rem);
+    font-weight: 500;
+    line-height: 1.6;
+    letter-spacing: 0.15em;
+    text-align: right;
+    text-wrap: wrap;
+  }
+
+  .content {
+    max-width: 60ch;
+  }
+
+  .stacked .content {
+    gap: var(--spacing-m, 1rem);
+  }
+
+  .title {
+    width: 100%;
+    color: var(--text-main, var(--clr-white, #fff));
+    font-family: var(--ff-body, sans-serif);
+    font-size: var(--font-size-lg, 1.188rem);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .description {
+    width: 100%;
+    color: var(--text-muted, rgb(255 255 255 / 70%));
+    font-family: var(--ff-body, sans-serif);
+    font-size: var(--font-size-md, 1rem);
+    font-weight: 400;
+    line-height: 1.6;
+    width: 100%;
+    text-wrap: wrap;
+  }
+</style>

@@ -1,0 +1,103 @@
+---
+interface Props {
+  /** The primary metric displayed by the card. */
+  number?: string | number;
+  /** Supporting label shown below the metric. */
+  information?: string;
+  /** Change text displayed when `showChange` is enabled. */
+  change?: string;
+  /** Shows the divider and change text. */
+  showChange?: boolean;
+  class?: string;
+}
+
+const {
+  number = "4,820",
+  information = "Total Sessions",
+  change = "▲ 18.2% MoM",
+  showChange = false,
+  class: className,
+} = Astro.props;
+---
+
+<li>
+  <article class:list={["card-a", className]} data-node-id="48:654">
+    <p class="number" data-node-id="48:648">{number}</p>
+
+    <div class="details" data-node-id="48:652">
+      <p class="information" data-node-id="48:649">{information}</p>
+
+      {
+        showChange && (
+          <>
+            <span class="divider" aria-hidden="true" data-node-id="48:651" />
+            <p class="change" data-node-id="48:650">
+              {change}
+            </p>
+          </>
+        )
+      }
+    </div>
+  </article>
+</li>
+
+<style>
+  li {
+    list-style-type: none;
+  }
+
+  .card-a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xs, 0.5rem);
+    padding: var(--spacing-s, 1rem);
+    color: var(--clr-white, #fff);
+    font-family: var(--ff-body, sans-serif);
+  }
+
+  .number,
+  .information,
+  .change {
+    margin: 0;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+
+  .number {
+    width: 100%;
+    font-size: var(--font-size-6xl, 3.563rem);
+    line-height: 1;
+    text-align: center;
+  }
+
+  .details {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs, 0.5rem);
+    width: 100%;
+  }
+
+  .information,
+  .change {
+    flex: none;
+    font-size: var(--font-size-md, 1rem);
+    line-height: 1.6;
+    white-space: nowrap;
+  }
+
+  .information {
+    color: var(--text-muted);
+  }
+
+  .card-a__divider {
+    width: 1px;
+    height: 22px;
+    background: color-mix(in srgb, var(--clr-white, #fff) 20%, transparent);
+  }
+
+  .card-a__change {
+    color: var(--clr-green-500, #4cb050);
+  }
+</style>

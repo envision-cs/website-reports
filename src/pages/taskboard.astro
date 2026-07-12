@@ -1,0 +1,1069 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout pageTitle="Home">
+  <div class="wrap intro">
+    <div class="eyebrow">Work Tracker</div>
+    <h1 class="h1">What's in flight.</h1>
+  </div>
+
+  <main class="board" id="board" aria-label="Kanban board">
+    <section class="column" data-status="todo">
+      <header class="column__header">
+        <h2 class="column__title">To do</h2>
+        <span
+          class="column__count"
+          aria-label="cards in column"
+          aria-live="polite">0</span
+        >
+      </header>
+      <div class="column__cards" role="list"></div>
+      <form class="column__add">
+        <textarea
+          name="title"
+          rows="1"
+          placeholder="Add a card…"
+          required=""
+          aria-label="Add a card to To do"></textarea>
+        <button type="submit" aria-label="Add card">+</button>
+        <textarea
+          name="description"
+          rows="1"
+          placeholder="Description — optional"
+          aria-label="Description for the new card in To do"></textarea>
+      </form>
+    </section><section class="column" data-status="doing">
+      <header class="column__header">
+        <h2 class="column__title">In progress</h2>
+        <span
+          class="column__count"
+          aria-label="cards in column"
+          aria-live="polite">0</span
+        >
+      </header>
+      <div class="column__cards" role="list"></div>
+      <form class="column__add">
+        <textarea
+          name="title"
+          rows="1"
+          placeholder="Add a card…"
+          required=""
+          aria-label="Add a card to In progress"></textarea>
+        <button type="submit" aria-label="Add card">+</button>
+        <textarea
+          name="description"
+          rows="1"
+          placeholder="Description — optional"
+          aria-label="Description for the new card in In progress"></textarea>
+      </form>
+    </section><section class="column" data-status="done">
+      <header class="column__header">
+        <h2 class="column__title">Done</h2>
+        <span
+          class="column__count"
+          aria-label="cards in column"
+          aria-live="polite">0</span
+        >
+      </header>
+      <div class="column__cards" role="list"></div>
+      <form class="column__add">
+        <textarea
+          name="title"
+          rows="1"
+          placeholder="Add a card…"
+          required=""
+          aria-label="Add a card to Done"></textarea>
+        <button type="submit" aria-label="Add card">+</button>
+        <textarea
+          name="description"
+          rows="1"
+          placeholder="Description — optional"
+          aria-label="Description for the new card in Done"></textarea>
+      </form>
+    </section>
+  </main>
+  <p
+    id="board-live"
+    class="visually-hidden"
+    aria-live="polite"
+    aria-atomic="true"
+  >
+  </p>
+  <template id="column-template">
+    <section class="column">
+      <header class="column__header">
+        <h2 class="column__title"></h2>
+        <span
+          class="column__count"
+          aria-label="cards in column"
+          aria-live="polite"></span>
+      </header>
+      <div class="column__cards" role="list"></div>
+      <form class="column__add">
+        <textarea name="title" rows="1" placeholder="Add a card…" required=""
+        ></textarea>
+        <button type="submit" aria-label="Add card">+</button>
+        <textarea
+          name="description"
+          rows="1"
+          placeholder="Description — optional"></textarea>
+      </form>
+    </section>
+  </template>
+  <template id="card-template">
+    <article class="card" role="listitem" draggable="true" tabindex="0">
+      <div class="card__body">
+        <span class="card__title"></span>
+        <p class="card__desc"></p>
+      </div>
+      <button
+        class="card__delete"
+        commandfor=""
+        command="toggle-popover"
+        aria-label="Delete card">×</button
+      >
+      <div class="card__confirm" popover="" role="alertdialog">
+        <p>Delete this card?</p>
+        <button data-confirm="" commandfor="" command="hide-popover"
+          >Delete</button
+        >
+        <button commandfor="" command="hide-popover">Keep</button>
+      </div>
+    </article>
+  </template>
+</Layout>
+
+<script>
+  import { store, loadCards } from "../lib/taskboard/storage.ts";
+
+  const COLUMNS = [
+    {
+      id: "todo",
+      label: "To do",
+    },
+    {
+      id: "doing",
+      label: "In progress",
+    },
+    {
+      id: "done",
+      label: "Done",
+    },
+  ];
+
+  /* ---------- storage: localStorage instead of a server ---------- */
+  const KEY = "kanban.cards.v1";
+
+  // Sync across open tabs: another tab writes, this one re-renders.
+  addEventListener("storage", (e) => {
+    if (e.key !== KEY) return;
+    store(KEY).cards = new Map(
+      JSON.parse(e.newValue ?? "[]").map((c) => [c.id, c]),
+    );
+    transition(() => render());
+  });
+  /* ---------- rendering ---------- */
+  const board = document.getElementById("board");
+  const liveRegion = document.getElementById("board-live");
+  const columnTpl = document.querySelector("#column-template");
+  const cardTpl = document.getElementById("card-template");
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const transition = (fn) =>
+    !reduceMotion.matches && document.startViewTransition
+      ? document.startViewTransition(fn).finished
+      : (fn(), Promise.resolve());
+  let activeDrag = null;
+  let selectedCardId = null;
+
+  function makeCard(card) {
+    const el = cardTpl.content.firstElementChild.cloneNode(true);
+    el.dataset.id = card.id;
+    el.dataset.position = card.position;
+    el.style.viewTransitionName = `card-${card.id}`;
+    el.style.anchorName = `--card-${card.id}`;
+    const pop = el.querySelector(".card__confirm");
+    pop.id = `confirm-${card.id}`;
+    pop.style.positionAnchor = `--card-${card.id}`;
+    for (const b of el.querySelectorAll("[commandfor]"))
+      b.setAttribute("commandfor", pop.id);
+    pop
+      .querySelector("[data-confirm]")
+      .addEventListener("click", () => deleteCard(el));
+    pop.addEventListener("toggle", (e) => {
+      if (e.newState === "open") {
+        pop.querySelector("[data-confirm]").focus();
+      }
+    });
+    pop.querySelector("p").textContent = `Delete “${card.title}”?`;
+    const title = el.querySelector(".card__title");
+    title.textContent = card.title;
+    const desc = el.querySelector(".card__desc");
+    desc.textContent = card.description ?? "";
+    el.dataset.selected = String(card.id === selectedCardId);
+    el.addEventListener("click", (e) => {
+      if (e.target.closest("button, [popover]")) return;
+      if (title.isContentEditable || desc.isContentEditable) return;
+      selectCard(el);
+    });
+    el.addEventListener("dragstart", (e) => {
+      activeDrag = {
+        element: el,
+        originalList: el.parentElement,
+        originalNextSibling: el.nextElementSibling,
+        committed: false,
+      };
+      e.dataTransfer.setData("text/plain", card.id);
+      e.dataTransfer.effectAllowed = "move";
+      requestAnimationFrame(() => {
+        el.classList.add("card--dragging");
+      });
+    });
+    el.addEventListener("dragend", () => {
+      if (activeDrag?.element === el && !activeDrag.committed) {
+        const nextSibling = activeDrag.originalNextSibling?.isConnected
+          ? activeDrag.originalNextSibling
+          : null;
+        activeDrag.originalList.insertBefore(el, nextSibling);
+      }
+      board
+        .querySelectorAll(".column--over")
+        .forEach((column) => column.classList.remove("column--over"));
+      board.querySelectorAll(".column").forEach(updateCount);
+      el.classList.remove("card--dragging");
+      activeDrag = null;
+    });
+    el.addEventListener("dblclick", (e) => {
+      if (e.target.closest(".card__desc")) startEdit(el, desc, "description");
+      else startEdit(el, title);
+    });
+    el.addEventListener("keydown", (e) => {
+      if (e.target !== el || title.isContentEditable || desc.isContentEditable)
+        return;
+      const shortcut = e.altKey ? `Alt+${e.key}` : e.key;
+      switch (shortcut) {
+        case "Alt+ArrowUp":
+          e.preventDefault();
+          moveVertically(el, -1);
+          break;
+        case "Alt+ArrowDown":
+          e.preventDefault();
+          moveVertically(el, 1);
+          break;
+        case " ":
+          e.preventDefault();
+          selectCard(el);
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (e.shiftKey) startEdit(el, desc, "description");
+          else startEdit(el, title);
+          break;
+        case "Delete":
+          e.preventDefault();
+          pop.showPopover();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          moveByKeyboard(el, -1);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          moveByKeyboard(el, 1);
+          break;
+      }
+    });
+    return el;
+  }
+
+  function editSession(title) {
+    const controller = new AbortController();
+    return {
+      signal: controller.signal,
+      [Symbol.dispose]() {
+        controller.abort();
+        title.removeAttribute("contenteditable");
+      },
+    };
+  }
+  async function startEdit(el, field, key = "title") {
+    const before = field.textContent;
+    const { promise, resolve } = Promise.withResolvers();
+    using session = editSession(field);
+    field.contentEditable = "plaintext-only";
+    field.focus();
+    getSelection().selectAllChildren(field);
+    field.addEventListener("dblclick", () => startEdit(el, field, key));
+    field.addEventListener("blur", () => resolve(true), {
+      signal: session.signal,
+    });
+    field.addEventListener(
+      "keydown",
+      (e) => {
+        if (e.key === "Enter" && !e.shiftKey)
+          (e.preventDefault(), resolve(true));
+        if (e.key === "Escape") resolve(false);
+      },
+      {
+        signal: session.signal,
+      },
+    );
+    const save = await promise;
+    const next = field.textContent.trim();
+    const required = key === "title";
+    if (!save || next === before || (required && !next)) {
+      field.textContent = before;
+      return;
+    }
+    field.textContent = next;
+    store(KEY).update(el.dataset.id, {
+      [key]: next,
+    });
+  }
+  async function deleteCard(el) {
+    const column = el.closest(".column");
+    store(KEY).remove(el.dataset.id);
+    await transition(() => {
+      el.remove();
+      updateCount(column);
+    });
+  }
+  async function moveByKeyboard(el, dir) {
+    const cols = [...board.querySelectorAll(".column")];
+    const target = cols[cols.indexOf(el.closest(".column")) + dir];
+    if (!target) return;
+    const list = target.querySelector(".column__cards");
+    const last = [...list.querySelectorAll(".card")].at(-1);
+    const position = last ? Number(last.dataset.position) + 1 : 1;
+    await transition(() => {
+      list.moveBefore(el, null);
+      cols.forEach(updateCount);
+    });
+    el.dataset.position = position;
+    el.focus();
+    store.update(el.dataset.id, {
+      status: target.dataset.status,
+      position,
+    });
+  }
+  async function moveVertically(el, direction) {
+    const column = el.closest(".column");
+    const list = column.querySelector(".column__cards");
+    const cards = [...list.querySelectorAll(".card")];
+    const currentIndex = cards.indexOf(el);
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= cards.length) {
+      announce(
+        direction < 0
+          ? "Card is already first in the column."
+          : "Card is already last in the column.",
+      );
+      return;
+    }
+    const targetCard = cards[targetIndex];
+    await transition(() => {
+      if (direction < 0) {
+        list.moveBefore(el, targetCard);
+      } else {
+        list.moveBefore(el, targetCard.nextElementSibling);
+      }
+    });
+    persistBoardOrder();
+    el.focus();
+    const reorderedCards = [...list.querySelectorAll(".card")];
+    const newPosition = reorderedCards.indexOf(el) + 1;
+    const columnName = column
+      .querySelector(".column__title")
+      .textContent.trim();
+    const cardName = el.querySelector(".card__title").textContent.trim();
+    announce(
+      `Moved ${cardName} to position ${newPosition} of ${reorderedCards.length} in ${columnName}.`,
+    );
+  }
+
+  function updateCount(column) {
+    column.querySelector(".column__count").textContent =
+      column.querySelectorAll(".card").length;
+  }
+
+  function selectCard(el) {
+    const wasSelected = el.dataset.selected === "true";
+    board.querySelectorAll('.card[data-selected="true"]').forEach((card) => {
+      card.dataset.selected = "false";
+    });
+    if (wasSelected) {
+      selectedCardId = null;
+      announce(`${el.querySelector(".card__title").textContent} deselected.`);
+      return;
+    }
+    el.dataset.selected = "true";
+    selectedCardId = el.dataset.id;
+    announce(`${el.querySelector(".card__title").textContent} selected.`);
+  }
+
+  function announce(message) {
+    liveRegion.textContent = "";
+    requestAnimationFrame(() => {
+      liveRegion.textContent = message;
+    });
+  }
+
+  function persistBoardOrder() {
+    for (const column of board.querySelectorAll(".column")) {
+      const status = column.dataset.status;
+      const cards = [...column.querySelectorAll(".card")];
+      cards.forEach((element, index) => {
+        const position = index + 1;
+        const card = store(KEY).cards.get(element.dataset.id);
+        if (!card) return;
+        card.status = status;
+        card.position = position;
+        element.dataset.position = position;
+      });
+    }
+    store.persist();
+  }
+  /* ---------- drag and drop ---------- */
+  function getCardAfter(list, y) {
+    const cards = [...list.querySelectorAll(".card:not(.card--dragging)")];
+    return (
+      cards.find((c) => {
+        const box = c.getBoundingClientRect();
+        return y < box.top + box.height / 2;
+      }) ?? null
+    );
+  }
+
+  function wireColumn(column, status) {
+    const list = column.querySelector(".column__cards");
+    list.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      const dragging = document.querySelector(".card--dragging");
+      if (!dragging) return;
+      column.classList.add("column--over");
+      const after = getCardAfter(list, e.clientY);
+      if (
+        dragging.parentElement !== list ||
+        dragging.nextElementSibling !== after
+      ) {
+        list.moveBefore(dragging, after);
+      }
+    });
+    list.addEventListener("dragleave", (e) => {
+      if (!column.contains(e.relatedTarget))
+        column.classList.remove("column--over");
+    });
+    list.addEventListener("drop", (e) => {
+      e.preventDefault();
+      const dragging = document.querySelector(".card--dragging");
+      if (!dragging) return;
+      if (activeDrag?.element === dragging) {
+        activeDrag.committed = true;
+        persistBoardOrder();
+      }
+      board
+        .querySelectorAll(".column--over")
+        .forEach((column) => column.classList.remove("column--over"));
+      board.querySelectorAll(".column").forEach(updateCount);
+      persistBoardOrder();
+    });
+    const form = column.querySelector(".column__add");
+    const input = form.elements.title;
+    const descInput = form.elements.description;
+    for (const field of [input, descInput]) {
+      field.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey)
+          (e.preventDefault(), form.requestSubmit());
+      });
+    }
+    input.setAttribute(
+      "aria-label",
+      `Add a card to ${column.querySelector(".column__title").textContent}`,
+    );
+    descInput.setAttribute(
+      "aria-label",
+      `Description for the new card in ${column.querySelector(".column__title").textContent}`,
+    );
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const title = input.value.trim();
+      if (!title) return;
+      const description = descInput.value.trim();
+      input.value = "";
+      descInput.value = "";
+      const card = store(KEY).create(title, description, status);
+      await transition(() => {
+        list.appendChild(makeCard(card));
+        updateCount(column);
+      });
+    });
+  }
+  /* ---------- init ---------- */
+  function render() {
+    board.replaceChildren();
+    const byStatus = Map.groupBy(store(KEY).list(), (c) => c.status);
+    for (const { id, label } of COLUMNS) {
+      const column = columnTpl.content.firstElementChild.cloneNode(true);
+      column.dataset.status = id;
+      column.querySelector(".column__title").textContent = label;
+      const list = column.querySelector(".column__cards");
+      (byStatus.get(id) ?? [])
+        .toSorted((a, b) => a.position - b.position)
+        .forEach((c) => list.appendChild(makeCard(c)));
+      wireColumn(column, id);
+      board.appendChild(column);
+      updateCount(column);
+    }
+  }
+  render();
+</script>
+
+<style>
+  @layer tokens, base, components, motion;
+
+  @layer tokens {
+    :root {
+      color-scheme: dark;
+      --bg: #141414;
+      --surface: #212121;
+      --surface-2: #181818;
+      --ink: #ffffff;
+      --ink-soft: #9a9a9a;
+      --ink-faint: #6f6f6f;
+      --line: #262626;
+      --line-2: #2e2e2e;
+      --red: #e05c4a;
+      --radius: 3px;
+      --accent: #3baee8;
+      --accent-soft: rgba(59, 174, 232, 0.07);
+    }
+
+    .column[data-status="todo"] {
+      --accent: #8a8a8a;
+      --accent-soft: rgba(160, 160, 160, 0.07);
+    }
+
+    .column[data-status="doing"] {
+      --accent: #e8a23b;
+      --accent-soft: rgba(232, 162, 59, 0.07);
+    }
+
+    .column[data-status="done"] {
+      --accent: #4cb050;
+      --accent-soft: rgba(76, 176, 80, 0.07);
+    }
+  }
+
+  @layer base {
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--ff-body);
+      -webkit-font-smoothing: antialiased;
+      container: page / inline-size;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      white-space: nowrap;
+      clip-path: inset(50%);
+      border: 0;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  @layer components {
+    /* ---------- page chrome ---------- */
+    .wrap {
+      width: 100%;
+      max-width: 1160px;
+      margin-inline: auto;
+      padding-inline: 48px;
+    }
+
+    .hdr {
+      border-bottom: 1px solid var(--line);
+    }
+
+    .hdr__inner {
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: 0.3em;
+    }
+
+    .logo--sm {
+      font-size: 15px;
+    }
+
+    .logo-o {
+      color: #3baee8;
+    }
+
+    .hdrtag {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .hdrnav {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .navlink {
+      text-decoration: none;
+      transition: color 0.15s;
+
+      &:hover {
+        color: #3baee8;
+      }
+    }
+
+    .intro {
+      padding-top: 72px;
+    }
+
+    .eyebrow {
+      color: #3baee8;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      font-size: 13px;
+      text-transform: uppercase;
+    }
+
+    .h1 {
+      font-size: 44px;
+      font-weight: 600;
+      line-height: 1.15;
+      margin: 16px 0 0;
+      letter-spacing: -0.01em;
+    }
+
+    .foot {
+      border-top: 1px solid var(--line);
+      margin-top: auto;
+    }
+
+    .foot__inner {
+      height: 84px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footnote {
+      font-size: 12.5px;
+      color: #777;
+      letter-spacing: 0.04em;
+    }
+
+    /* ---------- board ---------- */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(240px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1160px;
+      margin-inline: auto;
+      padding: 44px 48px 110px;
+      align-items: start;
+
+      &:has(.card--dragging) .card__delete {
+        visibility: hidden;
+      }
+    }
+
+    @container page (inline-size < 720px) {
+      .board {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        padding: 32px 22px 70px;
+      }
+    }
+
+    .column {
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 2px;
+      timeline-scope: --cards;
+      transition: background 0.15s ease;
+
+      &.column--over {
+        background: var(--accent-soft);
+      }
+    }
+
+    .column__header {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 18px 20px 14px;
+      border-block-start: 3px solid var(--accent);
+      border-block-end: 1px solid #242424;
+      background: var(--surface-2);
+      animation: header-shadow linear both;
+      animation-timeline: --cards;
+      animation-range: 0 24px;
+    }
+
+    .column__title {
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink);
+
+      &::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+    }
+
+    .column__count {
+      font-size: 12px;
+      font-weight: 700;
+      color: #7a7a7a;
+      background: #232323;
+      border-radius: 20px;
+      padding: 3px 9px;
+    }
+
+    .column__cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      min-height: 60px;
+      max-block-size: 70dvh;
+      overflow-y: auto;
+      scroll-timeline: --cards block;
+
+      &:not(:has(.card))::after {
+        content: "Drop tasks here";
+        padding: 24px 0;
+        text-align: center;
+        font-size: 13px;
+        color: #454545;
+      }
+    }
+
+    /* ---------- card ---------- */
+    .card {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      padding: 15px 16px;
+      cursor: grab;
+      transition: border-color 0.15s;
+      view-transition-class: card;
+
+      &:hover {
+        border-color: #3d3d3d;
+      }
+
+      &:active {
+        cursor: grabbing;
+      }
+
+      &.card--dragging {
+        opacity: 0.4;
+      }
+
+      &[data-selected="true"] {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+        box-shadow: 0 0 0 1px var(--accent);
+      }
+    }
+
+    .card__body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .card__title {
+      font-weight: 700;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+      outline: none;
+
+      &[contenteditable="plaintext-only"] {
+        box-shadow: inset 0 -2px 0 var(--accent);
+      }
+    }
+
+    .card__desc {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+      overflow-wrap: anywhere;
+      text-wrap: pretty;
+      white-space: pre-line;
+      outline: none;
+
+      &:empty {
+        display: none;
+      }
+
+      &:empty::before {
+        content: "Add description…";
+        font-size: 12.5px;
+        color: #565656;
+      }
+
+      &[contenteditable="plaintext-only"] {
+        box-shadow: inset 0 -2px 0 var(--accent);
+      }
+    }
+
+    .card:hover .card__desc:empty,
+    .card:focus-within .card__desc:empty,
+    .card__desc[contenteditable="plaintext-only"]:empty {
+      display: block;
+    }
+
+    .card__delete {
+      border: 0;
+      background: none;
+      color: #5a5a5a;
+      font-size: 16px;
+      line-height: 1;
+      padding: 2px 4px;
+      cursor: pointer;
+      border-radius: var(--radius);
+      opacity: 0;
+
+      .card:hover &,
+      .card:focus-within & {
+        opacity: 1;
+      }
+
+      &:hover {
+        color: var(--red);
+        background: rgba(224, 92, 74, 0.12);
+      }
+    }
+
+    .card__confirm {
+      position-area: block-end span-inline-start;
+      position-try-fallbacks: flip-block;
+      margin-block-start: 6px;
+      background: #1c1c1c;
+      color: var(--ink);
+      border: 1px solid var(--line-2);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      translate: 0 -4px;
+      transition:
+        opacity 0.15s,
+        translate 0.15s,
+        display 0.15s allow-discrete,
+        overlay 0.15s allow-discrete;
+
+      &:popover-open {
+        opacity: 1;
+        translate: 0 0;
+
+        @starting-style {
+          opacity: 0;
+          translate: 0 -4px;
+        }
+      }
+
+      p {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: #c9c9c9;
+      }
+
+      button {
+        font: inherit;
+        font-size: 12.5px;
+        font-weight: 700;
+        border: 1px solid #333;
+        background: #232323;
+        color: #ddd;
+        border-radius: var(--radius);
+        padding: 5px 12px;
+        cursor: pointer;
+
+        &:hover {
+          border-color: #4a4a4a;
+        }
+
+        &[data-confirm] {
+          background: var(--red);
+          border-color: transparent;
+          color: #fff;
+
+          &:hover {
+            background: #e8705f;
+          }
+        }
+      }
+    }
+
+    /* ---------- add form ---------- */
+    .column__add {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 6px;
+      margin: 0 14px 16px;
+
+      textarea {
+        flex: 1;
+        field-sizing: content;
+        resize: none;
+        border: 1px dashed #333;
+        background: transparent;
+        border-radius: var(--radius);
+        padding: 10px 12px;
+        font: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--ink);
+
+        &::placeholder {
+          color: #7a7a7a;
+          font-weight: 700;
+        }
+
+        &:hover {
+          border-color: #444;
+        }
+
+        &:focus {
+          background: #1d1d1d;
+          border-color: var(--accent);
+          border-style: solid;
+          outline: none;
+        }
+      }
+
+      textarea[name="description"] {
+        grid-column: 1 / -1;
+        display: none;
+        font-weight: 400;
+
+        &::placeholder {
+          font-weight: 400;
+        }
+      }
+
+      &:focus-within textarea[name="description"] {
+        display: block;
+      }
+
+      button {
+        border: 0;
+        background: transparent;
+        color: #7a7a7a;
+        font-size: 18px;
+        padding: 0 10px;
+        border-radius: var(--radius);
+        cursor: pointer;
+
+        &:hover {
+          background: #232323;
+          color: var(--accent);
+        }
+      }
+    }
+
+    /* ---------- small screens ---------- */
+    @media (max-width: 700px) {
+      .wrap {
+        padding-inline: 22px;
+      }
+
+      .intro {
+        padding-top: 48px;
+      }
+
+      .h1 {
+        font-size: 32px;
+      }
+
+      .hdr__inner,
+      .foot__inner {
+        flex-direction: column;
+        justify-content: center;
+        height: auto;
+        gap: 8px;
+        padding-block: 18px;
+        text-align: center;
+      }
+    }
+  }
+
+  @layer motion {
+    @keyframes header-shadow {
+      to {
+        box-shadow: 0 6px 10px -6px rgba(0, 0, 0, 0.55);
+      }
+    }
+
+    ::view-transition-group(.card) {
+      animation-duration: 220ms;
+      animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      ::before,
+      ::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  }
+</style>
