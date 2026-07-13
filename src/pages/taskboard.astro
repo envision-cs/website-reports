@@ -1,5 +1,8 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { env } from 'cloudflare:workers';
+
+const syncSecret = (env as any)?.SYNC_SECRET || "";
 ---
 
 <Layout pageTitle="Home">
@@ -8,7 +11,7 @@ import Layout from "../layouts/Layout.astro";
     <h1 class="h1">What's in flight.</h1>
   </div>
 
-  <main class="board" id="board" aria-label="Kanban board">
+  <div class="board" id="board" data-sync-secret={syncSecret} aria-label="Kanban board">
     <section class="column" data-status="todo">
       <header class="column__header">
         <h2 class="column__title">To do</h2>
@@ -82,7 +85,7 @@ import Layout from "../layouts/Layout.astro";
           aria-label="Description for the new card in Done"></textarea>
       </form>
     </section>
-  </main>
+  </div>
   <p
     id="board-live"
     class="visually-hidden"
@@ -91,7 +94,7 @@ import Layout from "../layouts/Layout.astro";
   >
   </p>
   <template id="column-template">
-    <section class="column">
+      <div class="column">
       <header class="column__header">
         <h2 class="column__title"></h2>
         <span
@@ -109,7 +112,7 @@ import Layout from "../layouts/Layout.astro";
           rows="1"
           placeholder="Description — optional"></textarea>
       </form>
-    </section>
+      </div>
   </template>
   <template id="card-template">
     <article class="card" role="listitem" draggable="true" tabindex="0">
@@ -135,7 +138,7 @@ import Layout from "../layouts/Layout.astro";
 </Layout>
 
 <script>
-  import { store, loadCards } from "../lib/taskboard/storage.ts";
+  import { store } from "../lib/taskboard/storage.ts";
 
   const COLUMNS = [
     {
@@ -155,106 +158,130 @@ import Layout from "../layouts/Layout.astro";
   /* ---------- storage: localStorage instead of a server ---------- */
   const KEY = "kanban.cards.v1";
 
-  const boardStore = store(KEY)
+  const boardStore = store(KEY);
 
   // Sync across open tabs: another tab writes, this one re-renders.
   addEventListener("storage", (e) => {
     if (e.key !== KEY) return;
     boardStore.cards = new Map(
-      JSON.parse(e.newValue ?? "[]").map((c) => [c.id, c]),
+      JSON.parse(e.newValue ?? "[]").map((c: any) => [c.id, c]),
     );
     transition(() => render());
   });
 
-let syncTimeout: any = null;
-let maxWaitTimeout: any = null;
-let isDirty = false;
-const DEBOUNCE_MS = 35000;
-const MAX_WAIT_MS = 120000;
+  // Client Sync Layer
+  let syncTimeout: any = null;
+  let maxWaitTimeout: any = null;
+  let isDirty = false;
+  const DEBOUNCE_MS = 35000;
+  const MAX_WAIT_MS = 120000;
 
-function getLocalUpdatedAt(): number {
-  const val = localStorage.getItem(KEY+".updatedAt")
-  return val ? Number(val):0
-}
-
-function markDirty(){
-  isDirty = true
-  localStorage.setItem(KEY + ".updatedAt", Date.now().toString());
-  scheduleSync();
-}
-
-function scheduleSync(){
-  if (syncTimeout) clearTimeout(syncTimeout)
-
-  if(!maxWaitTimeout){
-    maxWaitTimeout = setTimeout(()=>{
-      flushSync()
-    },DEBOUNCE_MS)
+  function getLocalUpdatedAt(): number {
+    const val = localStorage.getItem(KEY + ".updatedAt");
+    return val ? Number(val) : 0;
   }
-}
 
-async function flushSync() {
-   if (syncTimeout) {
-     clearTimeout(syncTimeout);
-     syncTimeout = null;
-   }
-   if (maxWaitTimeout) {
-     clearTimeout(maxWaitTimeout);
-     maxWaitTimeout = null;
-   }
-   if (!isDirty) return;
-   const cards = boardStore.list();
-   const updatedAt = getLocalUpdatedAt();
-   try {
-     const response = await fetch("/api/board", {
-       method: "PUT",
-       headers: {
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({ cards, updatedAt }),
-     });
-     if (response.ok) {
-       isDirty = false;
-       console.log("Successfully synced taskboard to Cloudflare KV.");
-     } else {
-       console.error("Failed to sync taskboard to KV:", response.statusText);
-       scheduleSync();
-     }
-   } catch (err) {
-     console.error("Error syncing taskboard to KV:", err);
-     scheduleSync();
-   }
- }
+  function markDirty() {
+    isDirty = true;
+    localStorage.setItem(KEY + ".updatedAt", Date.now().toString());
+    scheduleSync();
+  }
 
+  function scheduleSync() {
+    if (syncTimeout) clearTimeout(syncTimeout);
 
- function flushSyncBeacon() {
-   if (!isDirty) return;
-   const cards = boardStore.list();
-   const updatedAt = getLocalUpdatedAt();
+    if (!maxWaitTimeout) {
+      maxWaitTimeout = setTimeout(() => {
+        flushSync();
+      }, MAX_WAIT_MS);
+    }
 
-   fetch("/api/board", {
-     method: "PUT",
-     headers: {
-       "Content-Type": "application/json",
-     },
-     body: JSON.stringify({ cards, updatedAt }),
-     keepalive: true,
-   }).catch(err => console.error("Exit sync failed:", err));
- }
+    syncTimeout = setTimeout(() => {
+      flushSync();
+    }, DEBOUNCE_MS);
+  }
 
- addEventListener("visibilitychange", () => {
-   if (document.visibilityState === "hidden") {
-     flushSyncBeacon();
-   }
- });
+  /* ---------- rendering ---------- */
+  const board = document.getElementById("board");
+  const syncSecret = board?.dataset.syncSecret || "";
 
- addEventListener("pagehide", () => {
-   flushSyncBeacon();
- });
+  async function flushSync() {
+    if (syncTimeout) {
+      clearTimeout(syncTimeout);
+      syncTimeout = null;
+    }
+    if (maxWaitTimeout) {
+      clearTimeout(maxWaitTimeout);
+      maxWaitTimeout = null;
+    }
+    if (!isDirty) return;
+    const cards = boardStore.list();
+    const updatedAt = getLocalUpdatedAt();
 
- async function hydrateFromKV() {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (syncSecret) {
+      headers["Authorization"] = `Bearer ${syncSecret}`;
+    }
+
     try {
-      const response = await fetch("/api/board");
+      const response = await fetch("/api/board", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ cards, updatedAt }),
+      });
+      if (response.ok) {
+        isDirty = false;
+        console.log("Successfully synced taskboard to Cloudflare KV.");
+      } else {
+        console.error("Failed to sync taskboard to KV:", response.statusText);
+        scheduleSync();
+      }
+    } catch (err) {
+      console.error("Error syncing taskboard to KV:", err);
+      scheduleSync();
+    }
+  }
+
+  function flushSyncBeacon() {
+    if (!isDirty) return;
+    const cards = boardStore.list();
+    const updatedAt = getLocalUpdatedAt();
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (syncSecret) {
+      headers["Authorization"] = `Bearer ${syncSecret}`;
+    }
+
+    fetch("/api/board", {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({ cards, updatedAt }),
+      keepalive: true,
+    }).catch(err => console.error("Exit sync failed:", err));
+  }
+
+  addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      flushSyncBeacon();
+    }
+  });
+
+  addEventListener("pagehide", () => {
+    flushSyncBeacon();
+  });
+
+  async function hydrateFromKV() {
+    try {
+      const headers: Record<string, string> = {};
+      if (syncSecret) {
+        headers["Authorization"] = `Bearer ${syncSecret}`;
+      }
+
+      const response = await fetch("/api/board", { headers });
       if (!response.ok) {
         console.error("Failed to fetch taskboard from KV:", response.statusText);
         return;
@@ -283,8 +310,8 @@ async function flushSync() {
     }
   }
 
-  /* ---------- rendering ---------- */
-  const board = document.getElementById("board");
+  hydrateFromKV();
+
   const liveRegion = document.getElementById("board-live");
   const columnTpl = document.querySelector("#column-template");
   const cardTpl = document.getElementById("card-template");

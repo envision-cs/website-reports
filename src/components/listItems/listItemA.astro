@@ -15,9 +15,9 @@ const { title = "Tampa", value = "59", class: className } = Astro.props;
 
 <style>
   .list-item-a {
-    display: flex;
-    align-items: flex-start;
-    gap: 4.0625rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: var(--spacing-xxs);
     width: 100%;
     padding-block: var(--spacing-s, 1rem);
     border-top: 1px solid var(--text-muted, rgb(255 255 255 / 40%));
@@ -39,7 +39,6 @@ const { title = "Tampa", value = "59", class: className } = Astro.props;
 
   .title {
     flex: none;
-    white-space: nowrap;
   }
 
   .value {
