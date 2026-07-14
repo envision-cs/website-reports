@@ -1,4 +1,4 @@
-export const store = (KEY) => ({
+export const store = (KEY: string) => ({
   cards: new Map(loadCards(KEY).map((card) => [card.id, card])),
   persist() {
     localStorage.setItem(KEY, JSON.stringify([...this.cards.values()]));
@@ -6,7 +6,7 @@ export const store = (KEY) => ({
   list() {
     return [...this.cards.values()];
   },
-  create(title, description, status) {
+  create(title: string, description: string, status: string) {
     const siblings = this.list().filter((c) => c.status === status);
     const position = Math.max(0, ...siblings.map((c) => c.position)) + 1;
     const card = {
@@ -39,7 +39,7 @@ export const store = (KEY) => ({
   },
 });
 
-export function loadCards(KEY) {
+export function loadCards(KEY: string) {
   try {
     const parsed = JSON.parse(localStorage.getItem(KEY) ?? "[]");
     if (!Array.isArray(parsed)) return [];

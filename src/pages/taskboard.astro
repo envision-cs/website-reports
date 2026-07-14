@@ -173,7 +173,7 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
   let syncTimeout: any = null;
   let maxWaitTimeout: any = null;
   let isDirty = false;
-  const DEBOUNCE_MS = 35000;
+  const DEBOUNCE_MS = 3000;
   const MAX_WAIT_MS = 120000;
 
   function getLocalUpdatedAt(): number {
