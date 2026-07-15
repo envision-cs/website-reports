@@ -523,8 +523,10 @@ const initialData = JSON.stringify({
     field.addEventListener(
       "keydown",
       (e) => {
-        if (e.key === "Enter" && !e.shiftKey)
-          (e.preventDefault(), resolve(true));
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          resolve(true);
+        }
         if (e.key === "Escape") resolve(false);
       },
       {
@@ -698,8 +700,10 @@ const initialData = JSON.stringify({
     const descInput = form.elements.description;
     for (const field of [input, descInput]) {
       field.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey)
-          (e.preventDefault(), form.requestSubmit());
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          form.requestSubmit();
+        }
       });
     }
     input.setAttribute(
@@ -776,6 +780,42 @@ const initialData = JSON.stringify({
       hydrateFromKV();
     }
   }
+
+  /* ---------- live sync: poll KV while the board is open ---------- */
+  const POLL_MS = 5000;
+  let polling = false;
+
+  function userIsTyping(){
+    const el = document.activeElement as HTMLElement | null;
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      return el.tagName === "TEXTAREA" || el.tagName === "INPUT";
+  }
+
+  async function pollRemote(){
+    if (
+      polling ||
+      isDirty ||
+      activeDrag ||
+      userIsTyping() ||
+      document.visibilityState !== "visible"
+    ) {
+      return
+    }
+
+    polling = true
+    try {
+      await hydrateFromKV()
+    } finally {
+      polling = false
+    }
+  }
+
+  setInterval(pollRemote, POLL_MS);
+
+  addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") pollRemote();
+  });
 </script>
 
 <style>
