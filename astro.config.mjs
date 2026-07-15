@@ -6,6 +6,11 @@ import cloudflare from '@astrojs/cloudflare';
 // https://astro.build/config
 export default defineConfig({
   adapter: cloudflare(),
+  vite: {
+    build: {
+      minify: false,
+    },
+  },
   fonts: [{
     provider: fontProviders.local(),
     name: "Proxima Nova",

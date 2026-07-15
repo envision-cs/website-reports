@@ -1,20 +1,25 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "compatibility_date": "2026-07-06",
-  "compatibility_flags": ["nodejs_compat"],
-  "name": "website-reports",
-  "main": "@astrojs/cloudflare/entrypoints/server",
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS",
-  },
-  "observability": {
-    "enabled": true,
-  },
-  "kv_namespaces": [
-      {
-        "binding": "KV",
-        "id": "2b1aec319a61429387275142e3912637",
-      }
-   ]
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"compatibility_date": "2026-07-06",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"name": "website-reports",
+	"main": "@astrojs/cloudflare/entrypoints/server",
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS",
+	},
+	"observability": {
+		"enabled": true,
+	},
+	"vars": {
+		"MY_VARIABLE": "test",
+	},
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "2b1aec319a61429387275142e3912637",
+		}
+	]
 }

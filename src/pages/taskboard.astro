@@ -2,89 +2,115 @@
 import Layout from "../layouts/Layout.astro";
 import { env } from 'cloudflare:workers';
 
-const syncSecret = (env as any)?.SYNC_SECRET || "";
+export const prerender = false;
+
+type Card = {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  position: number;
+};
+
+const COLUMNS = [
+  { id: "todo", label: "To do" },
+  { id: "doing", label: "In progress" },
+  { id: "done", label: "Done" },
+];
+
+const cf = env as any;
+const syncSecret = cf?.SYNC_SECRET || "";
+
+// Server-render the initial board straight from KV.
+let initialCards: Card[] = [];
+let initialUpdatedAt = 0;
+let initialOk = false;
+try {
+  const raw = await cf?.KV?.get("board:default", "text");
+  initialOk = true;
+  if (raw) {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed?.cards)) initialCards = parsed.cards;
+    if (typeof parsed?.updatedAt === "number") initialUpdatedAt = parsed.updatedAt;
+  }
+} catch {
+  // KV unavailable at render time — let the client reconcile via /api/board.
+  initialOk = false;
+}
+
+const cardsFor = (status: string) =>
+  initialCards
+    .filter((c) => c.status === status)
+    .sort((a, b) => a.position - b.position);
+
+const initialData = JSON.stringify({
+  cards: initialCards,
+  updatedAt: initialUpdatedAt,
+  ok: initialOk,
+});
 ---
 
 <Layout pageTitle="Home">
   <div class="wrap intro">
     <div class="eyebrow">Work Tracker</div>
     <h1 class="h1">What's in flight.</h1>
+    <div class="sync" id="sync-status" data-state="idle" role="status" aria-live="polite">
+      <span class="sync__dot" aria-hidden="true"></span>
+      <span class="sync__label">Saved</span>
+      <span class="sync__time"></span>
+    </div>
   </div>
 
-  <div class="board" id="board" data-sync-secret={syncSecret} aria-label="Kanban board">
-    <section class="column" data-status="todo">
-      <header class="column__header">
-        <h2 class="column__title">To do</h2>
-        <span
-          class="column__count"
-          aria-label="cards in column"
-          aria-live="polite">0</span
-        >
-      </header>
-      <div class="column__cards" role="list"></div>
-      <form class="column__add">
-        <textarea
-          name="title"
-          rows="1"
-          placeholder="Add a card…"
-          required=""
-          aria-label="Add a card to To do"></textarea>
-        <button type="submit" aria-label="Add card">+</button>
-        <textarea
-          name="description"
-          rows="1"
-          placeholder="Description — optional"
-          aria-label="Description for the new card in To do"></textarea>
-      </form>
-    </section><section class="column" data-status="doing">
-      <header class="column__header">
-        <h2 class="column__title">In progress</h2>
-        <span
-          class="column__count"
-          aria-label="cards in column"
-          aria-live="polite">0</span
-        >
-      </header>
-      <div class="column__cards" role="list"></div>
-      <form class="column__add">
-        <textarea
-          name="title"
-          rows="1"
-          placeholder="Add a card…"
-          required=""
-          aria-label="Add a card to In progress"></textarea>
-        <button type="submit" aria-label="Add card">+</button>
-        <textarea
-          name="description"
-          rows="1"
-          placeholder="Description — optional"
-          aria-label="Description for the new card in In progress"></textarea>
-      </form>
-    </section><section class="column" data-status="done">
-      <header class="column__header">
-        <h2 class="column__title">Done</h2>
-        <span
-          class="column__count"
-          aria-label="cards in column"
-          aria-live="polite">0</span
-        >
-      </header>
-      <div class="column__cards" role="list"></div>
-      <form class="column__add">
-        <textarea
-          name="title"
-          rows="1"
-          placeholder="Add a card…"
-          required=""
-          aria-label="Add a card to Done"></textarea>
-        <button type="submit" aria-label="Add card">+</button>
-        <textarea
-          name="description"
-          rows="1"
-          placeholder="Description — optional"
-          aria-label="Description for the new card in Done"></textarea>
-      </form>
-    </section>
+  <div
+    class="board"
+    id="board"
+    data-sync-secret={syncSecret}
+    data-initial={initialData}
+    aria-label="Kanban board"
+  >
+    {COLUMNS.map((col) => (
+      <section class="column" data-status={col.id}>
+        <header class="column__header">
+          <h2 class="column__title">{col.label}</h2>
+          <span
+            class="column__count"
+            aria-label="cards in column"
+            aria-live="polite">{cardsFor(col.id).length}</span
+          >
+        </header>
+        <div class="column__cards" role="list">
+          {cardsFor(col.id).map((card) => (
+            <article
+              class="card"
+              role="listitem"
+              draggable="true"
+              tabindex="0"
+              data-id={card.id}
+              data-position={card.position}
+            >
+              <div class="card__body">
+                <span class="card__title">{card.title}</span>
+                <p class="card__desc">{card.description ?? ""}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+        <form class="column__add">
+          <textarea
+            name="title"
+            rows="1"
+            placeholder="Add a card…"
+            required=""
+            aria-label={`Add a card to ${col.label}`}></textarea>
+          <button type="submit" aria-label="Add card">+</button>
+          <textarea
+            name="description"
+            rows="1"
+            placeholder="Description — optional"
+            aria-label={`Description for the new card in ${col.label}`}></textarea>
+        </form>
+      </section>
+    ))}
   </div>
   <p
     id="board-live"
@@ -184,6 +210,7 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
   function markDirty() {
     isDirty = true;
     localStorage.setItem(KEY + ".updatedAt", Date.now().toString());
+    setSyncState("pending");
     scheduleSync();
   }
 
@@ -205,6 +232,49 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
   const board = document.getElementById("board");
   const syncSecret = board?.dataset.syncSecret || "";
 
+  /* ---------- sync status indicator ---------- */
+  const syncStatusEl = document.getElementById("sync-status");
+  const syncLabelEl = syncStatusEl?.querySelector(".sync__label");
+  const syncTimeEl = syncStatusEl?.querySelector(".sync__time");
+  let lastSyncedAt = 0;
+
+  const SYNC_LABELS: Record<string, string> = {
+    idle: "Saved",
+    pending: "Unsaved changes",
+    syncing: "Saving…",
+    synced: "Saved",
+    error: "Sync failed — retrying",
+  };
+
+  function relTime(ts: number): string {
+    if (!ts) return "";
+    const s = Math.round((Date.now() - ts) / 1000);
+    if (s < 5) return "just now";
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return new Date(ts).toLocaleDateString();
+  }
+
+  function setSyncState(state: string, ts?: number) {
+    if (!syncStatusEl || !syncLabelEl || !syncTimeEl) return;
+    syncStatusEl.dataset.state = state;
+    syncLabelEl.textContent = SYNC_LABELS[state] ?? state;
+    if ((state === "synced" || state === "idle") && ts) lastSyncedAt = ts;
+    const showTime = (state === "synced" || state === "idle") && lastSyncedAt;
+    syncTimeEl.textContent = showTime ? `· ${relTime(lastSyncedAt)}` : "";
+  }
+
+  // Keep the relative "last synced" label fresh while idle.
+  setInterval(() => {
+    const state = syncStatusEl?.dataset.state;
+    if ((state === "synced" || state === "idle") && lastSyncedAt && syncTimeEl) {
+      syncTimeEl.textContent = `· ${relTime(lastSyncedAt)}`;
+    }
+  }, 30000);
+
   async function flushSync() {
     if (syncTimeout) {
       clearTimeout(syncTimeout);
@@ -225,6 +295,7 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
       headers["Authorization"] = `Bearer ${syncSecret}`;
     }
 
+    setSyncState("syncing");
     try {
       const response = await fetch("/api/board", {
         method: "PUT",
@@ -233,13 +304,15 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
       });
       if (response.ok) {
         isDirty = false;
+        setSyncState("synced", Date.now());
         console.log("Successfully synced taskboard to Cloudflare KV.");
       } else {
-        console.log(response)
+        setSyncState("error");
         console.error("Failed to sync taskboard to KV:", response.statusText);
         scheduleSync();
       }
     } catch (err) {
+      setSyncState("error");
       console.error("Error syncing taskboard to KV:", err);
       scheduleSync();
     }
@@ -301,17 +374,19 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
 
         boardStore.cards = new Map(remoteData.cards.map((c: any) => [c.id, c]));
         transition(() => render());
+        setSyncState("synced", remoteUpdatedAt);
       } else if (remoteUpdatedAt < localUpdatedAt && localUpdatedAt > 0) {
         console.log("Local board is newer. Triggering sync to KV...");
         isDirty = true;
+        setSyncState("pending");
         flushSync();
+      } else {
+        setSyncState("synced", remoteUpdatedAt || localUpdatedAt);
       }
     } catch (err) {
       console.error("Error during KV hydration:", err);
     }
   }
-
-  hydrateFromKV();
 
   const liveRegion = document.getElementById("board-live");
   const columnTpl = document.querySelector("#column-template");
@@ -668,8 +743,39 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
     }
   }
 
-  render();
-  hydrateFromKV();
+  /* ---------- init: adopt the server-rendered board ---------- */
+  {
+    let serverCards: any[] = [];
+    let serverUpdatedAt = 0;
+    let serverOk = false;
+    try {
+      const parsed = JSON.parse(board?.dataset.initial || "{}");
+      serverCards = Array.isArray(parsed.cards) ? parsed.cards : [];
+      serverUpdatedAt = Number(parsed.updatedAt) || 0;
+      serverOk = parsed.ok === true;
+    } catch {}
+
+    const localUpdatedAt = getLocalUpdatedAt();
+
+    if (serverOk && serverUpdatedAt >= localUpdatedAt) {
+      // Server (KV) is authoritative — adopt it.
+      boardStore.cards = new Map(serverCards.map((c: any) => [c.id, c]));
+      boardStore.persist();
+      localStorage.setItem(KEY + ".updatedAt", String(serverUpdatedAt));
+      render();
+      setSyncState("synced", serverUpdatedAt || Date.now());
+    } else if (serverOk && localUpdatedAt > serverUpdatedAt) {
+      // Local changes are newer — render local, then push to KV.
+      render();
+      isDirty = true;
+      setSyncState("pending");
+      scheduleSync();
+    } else {
+      // KV read failed at render time — trust local, reconcile via /api/board.
+      render();
+      hydrateFromKV();
+    }
+  }
 </script>
 
 <style>
@@ -818,6 +924,72 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
       line-height: 1.15;
       margin: 16px 0 0;
       letter-spacing: -0.01em;
+    }
+
+    .sync {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+    }
+
+    .sync__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ink-faint);
+      flex: none;
+      transition: background 0.2s;
+    }
+
+    .sync__time {
+      color: var(--ink-faint);
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .sync[data-state="idle"] .sync__dot,
+    .sync[data-state="synced"] .sync__dot {
+      background: #4cb050;
+    }
+
+    .sync[data-state="pending"] .sync__dot {
+      background: #e8a23b;
+    }
+
+    .sync[data-state="syncing"] .sync__dot {
+      background: var(--accent);
+      animation: sync-pulse 1s ease-in-out infinite;
+    }
+
+    .sync[data-state="error"] .sync__dot {
+      background: var(--red);
+    }
+
+    .sync[data-state="error"] .sync__label {
+      color: var(--red);
+    }
+
+    @keyframes sync-pulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.25;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sync[data-state="syncing"] .sync__dot {
+        animation: none;
+      }
     }
 
     .foot {
