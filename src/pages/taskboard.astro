@@ -235,6 +235,7 @@ const syncSecret = (env as any)?.SYNC_SECRET || "";
         isDirty = false;
         console.log("Successfully synced taskboard to Cloudflare KV.");
       } else {
+        console.log(response)
         console.error("Failed to sync taskboard to KV:", response.statusText);
         scheduleSync();
       }

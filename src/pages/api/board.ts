@@ -3,8 +3,8 @@ import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = async ({ request }) => {
   const cloudflareEnv = env as any;
-  if (!cloudflareEnv || !cloudflareEnv.ENVISION_TASK) {
-    return new Response(JSON.stringify({ error: 'KV namespace ENVISION_TASK not bound.' }), {
+  if (!cloudflareEnv || !cloudflareEnv.KV) {
+    return new Response(JSON.stringify({ error: 'KV namespace KV not bound.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -23,7 +23,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const data = await cloudflareEnv.ENVISION_TASK.get('board:default', 'text');
+    const data = await cloudflareEnv.KV.get('board:default', 'text');
     if (!data) {
       return new Response(JSON.stringify({ cards: [], updatedAt: 0 }), {
         status: 200,
@@ -45,8 +45,8 @@ export const GET: APIRoute = async ({ request }) => {
 
 export const PUT: APIRoute = async ({ request }) => {
   const cloudflareEnv = env as any;
-  if (!cloudflareEnv || !cloudflareEnv.ENVISION_TASK) {
-    return new Response(JSON.stringify({ error: 'KV namespace ENVISION_TASK not bound.' }), {
+  if (!cloudflareEnv || !cloudflareEnv.KV) {
+    return new Response(JSON.stringify({ error: 'KV namespace KV not bound.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -73,7 +73,7 @@ export const PUT: APIRoute = async ({ request }) => {
       });
     }
 
-    await cloudflareEnv.ENVISION_TASK.put('board:default', JSON.stringify(body));
+    await cloudflareEnv.KV.put('board:default', JSON.stringify(body));
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
