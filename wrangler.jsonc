@@ -12,9 +12,9 @@
     "enabled": true,
   },
   "kv_namespaces": [
-    {
-      "binding": "ENVISION_TASK",
-      "id": "2b1aec319a61429387275142e3912637",
-    },
-  ],
+      {
+        "binding": "KV",
+        "id": "2b1aec319a61429387275142e3912637",
+      }
+   ]
 }
